@@ -30,8 +30,10 @@ function sayfa({ dosya, baslik, aciklama, betik }) {
 }
 
 sayfa({ dosya: 'index.html', baslik: `${SITE_ADI} — tarayıcıda çalışan, gizli ve ücretsiz`, aciklama: SLOGAN, betik: './src/ana.js' });
+sayfa({ dosya: 'pdf.html', baslik: `PDF düzenleme — ${SITE_ADI}`, aciklama: 'PDF araçları', betik: './src/pdf-sayfasi.js' });
+sayfa({ dosya: 'excel.html', baslik: `Excel düzenleme — ${SITE_ADI}`, aciklama: 'Excel araçları', betik: './src/excel-sayfasi.js' });
 sayfa({ dosya: 'hakkinda.html', baslik: `İlkeler ve gizlilik — ${SITE_ADI}`, aciklama: 'Gizlilik ilkeleri ve yapmadığımız şeyler.', betik: './src/hakkinda.js' });
 for (const a of ARACLAR) {
   sayfa({ dosya: `${a.slug}.html`, baslik: `${a.ad} — ${SITE_ADI}`, aciklama: a.kisa, betik: `./src/sayfalar/${a.slug}.js` });
 }
-console.log(`${ARACLAR.length + 2} HTML sayfası üretildi.`);
+console.log(`${ARACLAR.length + 4} HTML sayfası üretildi.`);

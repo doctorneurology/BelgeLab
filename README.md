@@ -2,7 +2,7 @@
 
 **Türkçe** · [English](README.en.md)
 
-Tarayıcıda çalışan, **sunucusuz**, açık kaynaklı (MIT) bir PDF araçları sitesi.
+Tarayıcıda çalışan, **sunucusuz**, açık kaynaklı (MIT) bir **PDF ve Excel** araçları sitesi. Ana sayfada iki büyük düğme vardır: **PDF düzenleme** ve **Excel düzenleme**.
 **Dosyalarınız cihazınızdan asla çıkmaz:** yükleme yok, hesap yok, izleme yok, dış servis yok (OCR dahil her şey sitenin kendi dosyalarıyla çalışır). Telefonda da rahat kullanılır, arayüz Türkçedir.
 
 > 🔗 Canlı site: `https://KULLANICI_ADINIZ.github.io/pdf-araclari/` (yayınladıktan sonra burayı güncelleyin)
@@ -14,6 +14,7 @@ Tarayıcıda çalışan, **sunucusuz**, açık kaynaklı (MIT) bir PDF araçlar�
 | Sayfaları düzenle | PDF birleştir · PDF böl · Sayfa sil · Sayfa sırala · Sayfa döndür · Sayfa çıkar · Kırp · **Yazı düzelt** (metin tabanlı PDF; sayfa düzeni aynen kalır) · **Taranmış belgede yazı düzelt** (yalnızca seçtiğiniz bölge) |
 | Belgeye ekle | Sayfa numarası · Üst/alt bilgi · Filigran ekle (ve **kendi eklediğini** geri al) · Görünür imza / metin kutusu · Form doldur |
 | Dönüştür ve küçült | **OCR** (taranmış PDF'i Türkçe okuyup aranabilir yapma) · **PDF → Word (.docx)** · **PDF sıkıştır** (kaliteyi koruyarak) · Resimden PDF · PDF'ten resim (PNG/JPEG, ZIP) |
+| Excel | **Excel birleştir** (sıra korunur, atlanacak üst satırlar ayarlanır) · **Hasta başvuru analizi** (TC / ad soyad / başvuru no sütunlarını otomatik bulur, kişileri sayar, dosyalar arası çapraz varlığı gösterir, Excel'e aktarır) |
 | Gizlilik ve şifre | **Karart (gerçek silme)** — yazı hem görüntüden hem dosyadan silinir · Şifre ekle (AES-256) · Şifre kaldır (**yalnızca şifre biliniyorsa**) |
 
 Türkçe karakterler (ğ ş ı İ ö ü ç) tüm araçlarda sorunsuz çalışır: açık lisanslı, ölçü uyumlu yazı tipleri
@@ -49,6 +50,11 @@ Hiçbir PDF aracı her belgede kusursuz çalışmaz. Bu sitenin bildiği sınır
 - Otomatik testler Node.js'te, elle deneme ise yalnızca Chromium tabanlı bir tarayıcıda (masaüstü + 375 px telefon genişliği) yapıldı. Safari, Firefox ve gerçek telefonlarda denenmedi.
 - Dijital imzalı belgede yapılan her değişiklik imzayı geçersiz kılar; çıktı imzasız yeni bir dosyadır (uyarı gösterilir).
 - Sayfa silme/çıkarma/bölme gibi işlemler sayfaları yeni belgeye kopyalar; form alanları, yer imleri ve ekler taşınmayabilir (uyarı gösterilir).
+
+**Excel**
+- Her dosyanın yalnızca **ilk sayfası** okunur. Analizde başlık satırı ilk 15 satır içinde "TC" ya da "ad soyad" başlığından bulunur; başlıklar tanınmazsa dosya için uyarı verilir.
+- Okuma için SheetJS `xlsx` 0.18.5 kullanılır (npm'deki son sürüm). Bu sürümde, özel hazırlanmış zararlı bir Excel dosyasını açarken sorun çıkarabilecek bilinen açıklar vardır; yalnızca **kendi, güvendiğiniz** dosyalarınızı açın. Dosyalar cihazınızdan çıkmaz.
+- Birleştirmede sütunlar yan yana hizalanır; başlıkları farklı sıradaki dosyalar için uyarı verilir ama düzeltilmez. Tüm hücreler metin olarak yazılır (baştaki sıfırlar korunur).
 
 **OCR (taranmış belgeyi aranabilir yapma)**
 - Yalnızca **Türkçe** model bulunur (İngilizce sözcükler genellikle okunur ama hata artar). El yazısı, bulanık, soluk, eğik ya da düşük çözünürlüklü taramalarda sonuç zayıftır; sayfa yönü/eğimi otomatik düzeltilmez.

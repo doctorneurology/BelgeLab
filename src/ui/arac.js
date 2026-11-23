@@ -34,13 +34,13 @@ export function aracKur(tanim) {
   // ---- 1. Dosya seçimi ----
   const girdi = h('input', {
     type: 'file', id: 'dosya-girdisi',
-    accept: dosyaTanimi.tur === 'pdf' ? 'application/pdf,.pdf' : 'image/*',
+    accept: dosyaTanimi.tur === 'pdf' ? 'application/pdf,.pdf' : dosyaTanimi.tur === 'excel' ? '.xlsx,.xls,.xlsm' : 'image/*',
     multiple: dosyaTanimi.coklu,
   });
   const alan = h('label', { class: 'dosya-alani', for: 'dosya-girdisi' },
     h('strong', {}, dosyaTanimi.tur === 'pdf'
       ? (dosyaTanimi.coklu ? 'PDF dosyalarını seçin' : 'PDF dosyasını seçin')
-      : 'Resimleri seçin'),
+      : dosyaTanimi.tur === 'excel' ? (dosyaTanimi.coklu ? 'Excel dosyalarını seçin (.xlsx, .xls)' : 'Excel dosyasını seçin (.xlsx, .xls)') : 'Resimleri seçin'),
     h('span', { class: 'soluk' }, 'Dokunun/tıklayın ya da dosyayı buraya sürükleyin. Dosya cihazınızdan çıkmaz.'),
     girdi);
   const hataAlani = h('div', { 'aria-live': 'polite' });
@@ -111,6 +111,10 @@ export function aracKur(tanim) {
             if (e instanceof SifreliPdfHatasi) girdiKaydi.sifreli = true;
             else throw new PdfHatasi(`"${f.name}" açılamadı: ${e.message}`);
           }
+        } else if (dosyaTanimi.tur === 'excel') {
+          if (!/.(xlsx|xls|xlsm)$/i.test(f.name)) throw new PdfHatasi(`“${f.name}” bir Excel dosyası (.xlsx / .xls) değil.`);
+          girdiKaydi.bayt = bayt;
+          girdiKaydi.excel = true;
         } else {
           let tur = resimTuru(bayt);
           if (tur !== 'png' && tur !== 'jpeg') {
@@ -146,7 +150,8 @@ export function aracKur(tanim) {
     liste.replaceChildren(...durum.dosyalar.map((d, i) => {
       const kucuk = d.resimUrl
         ? h('img', { class: 'kucuk-resim', src: d.resimUrl, alt: '' })
-        : h('canvas', { width: 40, height: 52, 'aria-hidden': 'true' });
+        : d.excel ? h('span', { class: 'kucuk-resim', 'aria-hidden': 'true', stil: { fontSize: '1.6rem', textAlign: 'center' } }, '📊')
+          : h('canvas', { width: 40, height: 52, 'aria-hidden': 'true' });
       if (!d.resimUrl && d.sayfa && d.boyut < 60 * 1024 * 1024) kucukResimCiz(d, kucuk);
       const satir = h('li', { class: 'dosya-satir' },
         kucuk,
@@ -285,6 +290,7 @@ export function aracKur(tanim) {
         parcalar.push(h('div', { class: 'onizleme' }, h('img', { src: url, alt: `${ilkResim.ad} önizlemesi`, stil: { maxWidth: '100%', border: '1px solid var(--kenar)' } })));
       }
     }
+    if (!ciktilar.length) parcalar.push(...ekler);
     sonucAlani.replaceChildren(h('section', { class: 'adim' }, ...parcalar));
     baslik.scrollIntoView({ behavior: 'smooth', block: 'start' });
     baslik.focus({ preventScroll: true });

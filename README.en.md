@@ -2,7 +2,7 @@
 
 [Türkçe](README.md) · **English**
 
-A browser-based, **serverless**, open-source (MIT) set of PDF tools. The interface is in **Turkish**, with full Turkish-character support and Turkish OCR.
+A browser-based, **serverless**, open-source (MIT) set of **PDF and Excel** tools. The home page has two big buttons: **PDF editing** and **Excel editing**. The interface is in **Turkish**, with full Turkish-character support and Turkish OCR.
 **Your files never leave your device:** no uploads, no accounts, no tracking, no external services (OCR included — everything is served from the site itself). It works well on phones too.
 
 > 🔗 Live site: `https://YOUR_USERNAME.github.io/pdf-araclari/` (update this after publishing)
@@ -14,6 +14,7 @@ A browser-based, **serverless**, open-source (MIT) set of PDF tools. The interfa
 | Edit pages | Merge · Split · Delete pages · Reorder · Rotate · Extract pages · Crop · **Fix text** (text-based PDFs; page layout stays identical) · **Fix text in scanned documents** (only in the region you select) |
 | Add to a document | Page numbers · Header/footer · Add watermark (and remove **only the ones this site added**) · Visible signature / text box · Fill forms |
 | Convert & shrink | **OCR** (read a scanned PDF in Turkish and make it searchable) · **PDF → Word (.docx)** · **Compress PDF** (quality-preserving) · Images to PDF · PDF to images (PNG/JPEG, ZIP) |
+| Excel | **Merge Excel files** (order kept, top rows to skip are adjustable) · **Patient application analysis** (auto-detects ID / name / application-no columns, counts people, shows cross-file presence, exports to Excel) |
 | Privacy & password | **Redact (true removal)** — text is erased from the picture *and* from the file · Add password (AES-256) · Remove password (**only if you know it**) |
 
 ## Screenshots
@@ -46,6 +47,11 @@ No PDF tool works perfectly on every document. The limitations we know of:
 - Automated tests run on Node.js; manual testing was done only in a Chromium-based browser (desktop + 375 px phone width). **Safari, Firefox and real phones have not been tested.**
 - Any change to a digitally signed document invalidates the signature; the output is a new unsigned file (a warning is shown).
 - Operations such as delete/extract/split copy pages into a new document; form fields, bookmarks and attachments may not carry over (a warning is shown).
+
+**Excel**
+- Only the **first sheet** of each file is read. In the analysis the header row is found within the first 15 rows by an "ID"/"name" header; unrecognised headers produce a per-file warning.
+- Reading uses SheetJS `xlsx` 0.18.5 (the latest on npm). That version has known issues with maliciously crafted spreadsheets; only open **your own, trusted** files. Files never leave your device.
+- Merging aligns columns side by side; files with differently ordered headers get a warning but are not fixed. All cells are written as text (leading zeros are kept).
 
 **OCR (making scanned documents searchable)**
 - Only the **Turkish** model is bundled (English words are usually read but with more errors). Handwriting, blurry, faint, skewed or low-resolution scans give poor results; page orientation/skew is not auto-corrected.

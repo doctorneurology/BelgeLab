@@ -10,7 +10,7 @@ describe('Site yapısı: her araç için sayfa ve betik var', () => {
     const slugs = ARACLAR.map((a) => a.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const a of ARACLAR) expect(GRUPLAR.map((g) => g.id)).toContain(a.grup);
-    expect(ARACLAR.length).toBe(23);
+    expect(ARACLAR.length).toBe(25);
   });
 
   for (const a of ARACLAR) {
@@ -27,6 +27,7 @@ describe('Site yapısı: her araç için sayfa ve betik var', () => {
   it('ana sayfa ve hakkında sayfası var; kişisel örnek PDF\'ler depoda yok', () => {
     expect(existsSync(yol('index.html'))).toBe(true);
     expect(existsSync(yol('hakkinda.html'))).toBe(true);
+    for (const b of ['pdf.html', 'excel.html']) expect(existsSync(yol(b)), b).toBe(true);
     const pdfler = readdirSync(yol('.')).filter((d) => d.toLowerCase().endsWith('.pdf'));
     expect(pdfler).toEqual([]);
   });

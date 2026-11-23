@@ -304,3 +304,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .td-baslik { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
 .td-baslik b { flex: 1; }
 .td-eski del { color: #b23b3b; overflow-wrap: anywhere; }
+
+/* ---- Ana sayfa: iki büyük düğme ---- */
+.ana-sayfa { display: grid; place-items: center; min-height: 62vh; }
+.ana-dugmeler { display: grid; gap: 22px; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 860px; }
+.ana-dugme { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 280px; border-radius: 22px; border: 2px solid var(--kenar); background: var(--yuzey); color: var(--metin); text-decoration: none; box-shadow: var(--golge); transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s; }
+.ana-dugme:hover, .ana-dugme:focus-visible { transform: translateY(-3px); border-color: var(--vurgu); box-shadow: 0 8px 26px rgba(36, 86, 214, 0.18); }
+.ana-excel:hover, .ana-excel:focus-visible { border-color: #1f9d55; box-shadow: 0 8px 26px rgba(31, 157, 85, 0.2); }
+.ana-ikon { font-size: 4.5rem; line-height: 1; }
+.ana-yazi { font-size: 1.6rem; font-weight: 700; }
+@media (max-width: 620px) { .ana-dugmeler { grid-template-columns: 1fr; } .ana-dugme { min-height: 180px; } .ana-ikon { font-size: 3.4rem; } }
+
+/* ---- Excel analiz ---- */
+.ex-kartlar { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin: 8px 0 12px; }
+.ex-kart { border: 1px solid var(--kenar); border-radius: 12px; padding: 10px 14px; background: var(--yuzey); }
+.ex-kart.vurgulu { border-color: var(--vurgu); background: var(--bilgi-bg); }
+.ex-deger { font-size: 1.7rem; font-weight: 700; }
+.ex-kontrol { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 6px 0 10px; }
+.ex-kontrol input[type='search'] { min-width: 220px; }
+.ex-tablo-kap { max-height: 520px; overflow: auto; border: 1px solid var(--kenar); border-radius: 10px; }
+.ex-tablo th { position: sticky; top: 0; background: var(--yuzey-2); z-index: 1; white-space: nowrap; }
+.ex-mono { font-family: ui-monospace, Consolas, monospace; }
+.ex-orta { text-align: center; }
+.ex-kalin { font-weight: 700; }

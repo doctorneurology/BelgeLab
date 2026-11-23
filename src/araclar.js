@@ -1,10 +1,17 @@
 // Sitedeki tüm araçların tek listesi. Ana sayfa, menü ve sayfa üretici bunu kullanır.
 
+// Ana sayfadaki iki büyük bölüm
+export const BOLUMLER = [
+  { id: 'pdf', ad: 'PDF düzenleme', ikon: '📄', sayfa: 'pdf.html', kisa: 'PDF araçları' },
+  { id: 'excel', ad: 'Excel düzenleme', ikon: '📊', sayfa: 'excel.html', kisa: 'Excel araçları' },
+];
+
 export const GRUPLAR = [
   { id: 'duzenle', ad: 'Sayfaları düzenle', aciklama: 'Birleştir, böl, sil, sırala, döndür, kırp' },
   { id: 'ekle', ad: 'Belgeye ekle', aciklama: 'Numara, bilgi, filigran, imza, form' },
   { id: 'donustur', ad: 'Dönüştür ve küçült', aciklama: 'OCR, Word, resim, sıkıştırma' },
   { id: 'guvenlik', ad: 'Gizlilik ve şifre', aciklama: 'Gerçek karartma, şifre koy ya da (şifreyi biliyorsanız) kaldır' },
+  { id: 'excel', ad: 'Excel', aciklama: 'Excel dosyalarını birleştir ve hasta başvuru analizi yap', bolum: 'excel' },
 ];
 
 export const ARACLAR = [
@@ -31,7 +38,11 @@ export const ARACLAR = [
   { slug: 'karart', grup: 'guvenlik', ikon: '⬛', ad: 'Karart (gerçek silme)', kisa: 'Gizli bilgiyi hem görüntüden hem dosyadan kalıcı olarak sil.' },
   { slug: 'sifre-ekle', grup: 'guvenlik', ikon: '🔒', ad: 'Şifre ekle', kisa: 'PDF’i açmak için şifre koy.' },
   { slug: 'sifre-kaldir', grup: 'guvenlik', ikon: '🔓', ad: 'Şifre kaldır', kisa: 'Şifresini BİLDİĞİN PDF’ten şifreyi kaldır.' },
+  { slug: 'excel-birlestir', grup: 'excel', ikon: '🧮', ad: 'Excel birleştir', kisa: 'Birkaç Excel dosyasını tek dosyada topla (üst bilgi satırları atılır).' },
+  { slug: 'excel-analiz', grup: 'excel', ikon: '📈', ad: 'Hasta başvuru analizi', kisa: 'TC, ad soyad ve başvuru no sütunlarını otomatik bul; kişileri say, dosyalar arası çapraz varlığı göster.' },
 ];
+
+export const grupBolumu = (g) => g.bolum ?? 'pdf';
 
 export const SITE_ADI = 'PDF Araçları';
 export const SLOGAN = 'Dosyalarınız cihazınızdan çıkmaz. Her şey tarayıcınızda çalışır.';
