@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+
+# Örnek PDF testlerinin çıktıları (kişisel belgelerden üretildiği için ASLA depoya girmez)
+ciktilar/
+test-ciktilari/
+
+# Kişisel örnek PDF'ler depoya girmesin
+ornekler/
+*.local.pdf
+
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
