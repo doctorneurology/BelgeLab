@@ -13,14 +13,27 @@ export function qpdfWasmAyarla(yol) {
   WASM_YOLU = yol;
 }
 
+/** qpdf'in yazdıklarını (karakter karakter gelir) toplar. */
+function baytToplayici() {
+  const bayt = [];
+  return {
+    yaz: (c) => { if (typeof c === 'number') bayt.push(c & 255); },
+    metin: () => new TextDecoder().decode(new Uint8Array(bayt)),
+  };
+}
+
 async function calistir(args, girdi) {
   if (!WASM_YOLU) throw new PdfHatasi('Şifreleme bileşeni hazır değil.');
-  const kayit = [];
+  const cikis = baytToplayici();
+  const hata = baytToplayici();
+  const ekstra = [];
   const qpdf = await createModule({
     locateFile: () => WASM_YOLU,
     noInitialRun: true,
-    print: (t) => kayit.push(String(t)),
-    printErr: (t) => kayit.push(String(t)),
+    // qpdf'in ekrana yazacağı her şeyi yakala: standart akışlar bizim işlevlerimize bağlanır
+    preRun: [(m) => m.FS.init(undefined, cikis.yaz, hata.yaz)],
+    print: (t) => ekstra.push(String(t)),
+    printErr: (t) => ekstra.push(String(t)),
   });
   qpdf.FS.writeFile('/girdi.pdf', girdi);
   let kod = 0;
@@ -28,13 +41,13 @@ async function calistir(args, girdi) {
     kod = qpdf.callMain(args);
   } catch (e) {
     kod = typeof e?.status === 'number' ? e.status : 1;
-    if (typeof e?.status !== 'number') kayit.push(String(e?.message ?? e));
+    if (typeof e?.status !== 'number') ekstra.push(String(e?.message ?? e));
   }
   let cikti = null;
   if (kod === 0 || kod === 3) {
     try { cikti = qpdf.FS.readFile('/cikti.pdf'); } catch { /* çıktı yok */ }
   }
-  return { kod, kayit: kayit.join('\n'), cikti };
+  return { kod, kayit: [cikis.metin(), hata.metin(), ...ekstra].join('\n'), cikti };
 }
 
 /** PDF şifreli mi? (şifre gerekmeden anlaşılabilir) */

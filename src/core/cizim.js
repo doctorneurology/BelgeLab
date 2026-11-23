@@ -86,6 +86,7 @@ export class SayfaCizici {
     this.kaynaklar = [];
     this.fontAdlari = new Map();
     this.resimAdlari = new Map();
+    this.opaklikAdlari = new Map();
   }
 
   get genislik() { return this.gorunur.vw; }
@@ -94,10 +95,13 @@ export class SayfaCizici {
   _opaklikAdi(o) {
     if (o == null || o >= 1) return null;
     const sinir = Math.max(0, Math.min(1, o));
-    const dict = this.ctx.obj({ Type: 'ExtGState', ca: sinir, CA: sinir });
-    const ad = this.page.node.newExtGState('PAG', dict).decodeText();
-    this.kaynaklar.push(`ExtGState:${ad}`);
-    return ad;
+    if (!this.opaklikAdlari.has(sinir)) {
+      const dict = this.ctx.obj({ Type: 'ExtGState', ca: sinir, CA: sinir });
+      const ad = this.page.node.newExtGState('PAG', dict).decodeText();
+      this.kaynaklar.push(`ExtGState:${ad}`);
+      this.opaklikAdlari.set(sinir, ad);
+    }
+    return this.opaklikAdlari.get(sinir);
   }
 
   _fontAdi(font) {
@@ -188,7 +192,7 @@ export class SayfaCizici {
 function ilkBaytlar(nesne) {
   if (!(nesne instanceof PDFRawStream)) return null;
   if (nesne.dict.has(PDFName.of('Filter'))) return null; // bizim akışlarımız sıkıştırılmaz
-  return new TextDecoder('latin1').decode(nesne.contents.subarray(0, 600));
+  return new TextDecoder('latin1').decode(nesne.contents.subarray(0, 4096));
 }
 
 function isaretCoz(metin) {
