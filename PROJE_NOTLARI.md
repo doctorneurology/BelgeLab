@@ -1,7 +1,7 @@
 # PROJE NOTLARI — PDF Araçları
 
 > **Her oturumun başında bu dosya okunur. Her aşama bitince güncellenir.**
-> Son güncelleme: 2026-11-23 (Oturum 1 sonu)
+> Son güncelleme: 2026-11-23 (Oturum 2 sonu — yazı düzeltme motoru)
 
 ## 1. Proje nedir?
 
@@ -60,6 +60,15 @@ Ayrıntılı lisans listesi: `THIRD_PARTY_LICENSES.md`.
 6. **Yazı tipleri:** `src/core/fonts.js`; metindeki karakter yazı tipinde yoksa sessizce kutu çizmek yerine anlaşılır hata verir (`metniDogrula`). Varsayılan yazı tipi Liberation Sans.
 7. **Çıktı üreticisi dürüst:** `Producer` = "PDF Araçları (açık kaynak…)" ve ModDate güncel zaman yazılır.
 8. **Kırp:** yalnızca CropBox değiştirir → kırpılan içerik dosyada kalır; sonuçta bu **uyarı** olarak gösterilir.
+9. **Yazı düzeltme motoru (`src/core/yazi/`, Oturum 2):**
+   - `akis.js` içerik akışı okuyucu (her işlecin bayt aralığı saklanır → dokunulmayan komutlar bayt bayt aynı yazılır), matris yardımcıları.
+   - `font.js` yazı tipi çözücü: ToUnicode CMap, Encoding/Differences + glif adları, Identity-H (W/DW), standart 14 yazı tipi genişlikleri (`@pdf-lib/standard-fonts`); ad/özelliklerden açık karşılık önerisi (Times→Liberation Serif, Arial/Helvetica→Liberation Sans, Calibri→Carlito, Cambria→Caladea, Courier→Liberation Mono; "Condensed/Neue/Light…" kesimler ölçü uyumlu SAYILMAZ). Tanınmayan yazı tipinde aile, satırların genişliğine en iyi uyan açık yazı tipi ölçülerek seçilir.
+   - `analiz.js` (Aşama 1): akışı ve iç içe form nesnelerini grafik durumuyla yorumlar (CTM, Tm/Tlm, Tc/Tw/Tz/Ts/Tr, renk); her glifin görünür koordinatı; satır kurma (üst/alt simge bağlanır, düzenli aralıklı iki yana yaslı satırlar birleşir); hizalama (sol/orta/sağ/iki yana) ve düzenlemede kullanılabilir alan (`sinir`); korumalar: `ustalt` (sayfalar arası aynı yerde tekrar, rakamlar yok sayılır), `logo` (satırın yarısı küçük, tekrar etmeyen bir resmin üstünde), `suslu`, `donuk`, `dikey`, `ozel` (Type3, görünmez/kırpma yazısı), `cozulemedi`. `SINIR` = kabul sınırları (%3 ölçek, kelime sonu 0,3 pt, doğrulama 0,5 pt).
+   - `yeniden.js` (Aşama 2-3): her yazı komutu **akıştaki kendi yerinde** değiştirilir (çizim sırası, kırpma, saydamlık, katman, etiket yapısı aynen kalır). Kaldırılan komutun yerine yazı imlecini eski yerine götüren `[n] TJ` konur. Değişmeyen satırlar kelime kelime orijinal x'ine oturtulur, kelime genişliği `Tz` ile en fazla %3 ayarlanır; daha fazlası gerekirse satır orijinal kalır ve raporda "kontrol gerekli" olur. Boşluklar da yerine yazılır (metin seçme/kopyalama bozulmasın). Düzenlenen satır, biçim parçaları (kalın kelime, renk, üst simge) korunarak hizalamaya göre yerleştirilir; sığmazsa uyarı. Değişen form nesnesinin sayfaya özel kopyası çıkarılır (paylaşılan başlık başka sayfalarda değişmez). Sonunda erişilemeyen tüm nesneler silinir (`kullanilmayanlariSil`) → eski yazı dosyada kalmaz. İmzalıysa `/V`, `/Perms`, `SigFlags` kaldırılır (imzasız yeni dosya, uyarı). Programın işaretli akışlarına (`%PDFARACLARI`, ör. filigran) dokunulmaz.
+   - `motor.js`: `yaziAnalizEt`, `yaziDuzelt(bayt,{sayfalar,degisiklikler,kilitAcik,esleme})` → `{bayt, rapor, uyarilar}`, `yazilariKaldir`.
+   - `dogrulama.js` (Aşama 5): (a) iki belgenin de tüm yazısı kaldırılıp **birebir** (eşiksiz) piksel karşılaştırması, (b) pdf.js metin öğelerinden bağımsız satır kurup başlangıç/bitiş/taban sapması (boşlukla biten öğenin bitişi belirsiz olduğu için o satırda bitiş ölçülmez), (c) üst üste bindirme görüntüsü (kırmızı=eski, camgöbeği=yeni, siyah=ortak). Tarayıcıda da çalışır.
+   - Arayüz: `src/sayfalar/yazi-duzelt.js` (sayfaya tıkla-düzelt, değişiklik listesi, yazı tipi eşleme tablosu, üst/alt bilgi kilidi, sığma uyarısı, sayfa raporu, doğrulama + bindirme). 40 sayfadan uzun belgelerde sayfa aralığı seçilir.
+   - Testler: `tests/yazi-motoru.test.js` + `tests/yardimci/yazi-pdf.js` (paylaşılan başlık form nesnesi, logo, döndürülmüş yazı, Helvetica, imzalı sürüm).
 
 **Geliştirme ortamı notları (Windows)**
 - Node.js 26 ve Git bu oturumda `winget` ile kuruldu (kullanıcı onayıyla). Claude'un PowerShell aracı bazen eski PATH ile açılır; komutların başına şunu koy:
@@ -71,7 +80,8 @@ Ayrıntılı lisans listesi: `THIRD_PARTY_LICENSES.md`.
 
 - `npm test` → 130 test (14 dosya): her araç için çalıştır → çiz → karşılaştır. Örn. birleştirmede sayfalar kaynak sayfalarla piksel piksel aynı, filigran geri alınca özgün sayfaya dönüyor, döndürülmüş sayfalarda konumlar doğru, yanlış/boş şifre reddediliyor, silinen sayfa içeriği dosyada kalmıyor.
 - `npm run ornek-test` → Masaüstündeki `ornekler` klasöründeki PDF'lerle (her dosyadan ilk 5 sayfa) tüm araçları dener, sayfaları çizip karşılaştırır, `ciktilar/ornek-test/rapor.md` üretir (git dışı). **Yazı düzeltme motoru için "bozmadan düzenledi mi?" denetimi bu betikteki `ayniMi` / `karsilastir` mantığıyla yapılacak** (`tools/karsilastir.mjs`: `sayfaPikselleri`, `karsilastir`, `metinCikar`, `doluluk`, `pngKaydet`).
-- Son sonuç (Oturum 1): `npm test` → 130/130 geçti. `npm run ornek-test` → 9 PDF, 117 kontrol geçti, 0 kaldı, 9 atlandı ("belgede form alanı yok").
+- Son sonuç (Oturum 2): `npm test` → **146/146** geçti (15 dosya; yazı motoru 15 test). `npm run ornek-test` → 9 PDF, **144 kontrol geçti, 0 kaldı**, 9 atlandı ("belgede form alanı yok"). Yazı motoru her belgede 3 kontrol yapar: analiz (çıkan metin pdf.js ile aynı); değişiklik yok → (a) 0 piksel, (b) ≤ 0,5 pt; bir satır düzeltme → yeni yazı yerinde, eski satır yok, (a) 0. Ayrıca `ciktilar/ornek-test/<dosya>/yazi-bindirme-sN.png` (bindirme), `yazi-yeniden.pdf`, `yazi-duzeltilmis.pdf` üretir; sayfa raporu `rapor.md`'de.
+- Oturum 1: 130/130 test, 117 örnek kontrol.
 - Tarayıcıda (Chrome tabanlı panel) elle denendi ve çalıştı: birleştir (+şifreli dosya şifre akışı), böl, sil, çıkar, sırala, döndür, numara, üst/alt bilgi, filigran ekle, filigran geri al (bulunamadı yolu), resimden PDF, PDF'ten resim (+ZIP), şifre ekle/kaldır, kırp, imza/metin kutusu (sürükleme dahil), form doldur; mobil genişlikte (375px) yatay taşma yok. Konsolda hata yok.
 
 ## 6. Bilinen sınırlar / sonraki oturum için fikirler
@@ -82,7 +92,8 @@ Ayrıntılı lisans listesi: `THIRD_PARTY_LICENSES.md`.
 - Kırp aracı kenarları sürüklemeyi desteklemiyor (kaydırıcılar var). İmza çiziminde basınç/ince çizgi yok.
 - Resimden PDF: WebP/GIF/BMP tarayıcıda PNG'ye çevrilir (EXIF yönelimi uygulanır); JPEG EXIF yönelimi çekirdekte işlenir (aynalı yönelimler uyarı verir).
 - Büyük dosyalarda ana iş parçacığında çalışıyor (arayüz kısa süre donabilir); Web Worker'a taşımak iyileştirme olabilir.
-- Henüz yok: OCR, PDF→Word, yazı düzeltme motoru (aşağıda).
+- Henüz yok: OCR, PDF→Word, **taranmış PDF'te yazı düzeltme** (sonraki oturum).
+- Yazı motoru sınırları: ölçü uyumlu karşılığı olmayan yazı tiplerinde satırlar orijinal kalır (%3 kuralı); Type3 / görünmez / kırpma yazısı, dikey (Identity-V) ve Identity-H dışındaki CID kodlamaları korunur; düzenlenen satır dar bir kırpma alanındaysa uzayan yazı kırpılabilir; yeni yazıda çift aralığı (kerning) uygulanmaz (kelime genişliği ölçekle oturtulur); etiketli PDF'te /ActualText varsa düzenlenen satırın erişilebilirlik metni eski kalabilir. Tarayıcıda yalnızca yapay belgeyle elle denendi (masaüstü + 375 px); büyük gerçek belgelerle tarayıcı denemesi yapılmadı. Tarayıcıdaki doğrulama ilk 30 sayfayla sınırlı.
 
 ## 7. AŞAMA LİSTESİ
 
@@ -112,12 +123,16 @@ Her araç: ayrı sayfa + çekirdek kod + test (çalıştırıldı, sonuç göste
 - [x] Şifre ekle
 - [x] Şifre kaldır (yalnızca şifre biliniyorsa)
 
-### Aşama 2 — Yazı düzeltme motoru (Oturum 2) — **BAŞLANMADI**
-Hedef: PDF içindeki yazıyı düzeltme (metni değiştirme). Fikir/gereksinimler:
-- Orijinal yazı tipine en yakın ölçü uyumlu yazı tipini seç (Liberation/Carlito/Caladea/Noto); Türkçe karakterler sorunsuz olmalı.
-- Eski metni **gerçekten** kaldır (örtmek yetmez: arkada okunabilir kalmasın) ve yeni metni yerleştir; sığmayan/emin olunmayan durumda işaretle ve kullanıcıya göster (sessizce bozma).
-- Düzenlenen yeri belgede işaretle / üretici bilgisini dürüst yaz (iz saklama yok kuralı).
-- Doğrulama: `tools/karsilastir.mjs` ile düzenlenen sayfada **yalnızca hedef bölgenin** değiştiğini göster; `npm run ornek-test`'e kontrol ekle.
+### Aşama 2 — Yazı düzeltme motoru (Oturum 2) — **TAMAM (metin tabanlı PDF'ler)**
+Mantık: sayfa orijinal kalır; yalnızca yazı komutları yerinde değiştirilir, tüm yazı aynı konumlara ölçü uyumlu açık yazı tipiyle yeniden yazılır. Paragraf akıtma YOK; her satır kendi başlangıç/taban/boyut/renk değeriyle kalır. Ayrıntı: §4 madde 9.
+- [x] 1. Analiz: satır konum/boyut/renk/yazı tipi; üst/alt bilgi; logo, süslü, döndürülmüş/dikey yazı → korumalı
+- [x] 2. Yazı kaldırma (form nesneleri dahil; resim/çizim/kırpma/açıklama aynen)
+- [x] 3. Yeniden yazma: başlangıç/bitişe oturtma, en fazla %3 `Tz`; fazlası → orijinal + işaret
+- [x] 4. Düzenleme ekranı (`yazi-duzelt.html`): tıkla-düzelt, değişiklik listesi, yazı tipi/boyut/renk/kalın/italik, yazı tipi eşleme tablosu, üst/alt bilgi kilitli (açılabilir), sığmazsa uyarı
+- [x] 5. Doğrulama: (a) yazısız piksel karşılaştırma, (b) satır sapması, (c) bindirme görüntüsü, (d) sayfa raporu
+- [x] 6. İmzalı PDF: uyarı + imzasız yeni dosya
+- Sonuç (ilk 5 sayfa, 9 örnek): **9/9 belgede (a) fark 0 piksel, (b) en büyük sapma 0,28 pt** (sınır 0,5 pt). Hiçbir belge kalmadı.
+- Dürüst sınırlar (raporda "kontrol gerekli" olarak görünür, satır orijinal kalır): ölçü uyumlu açık karşılığı olmayan yazı tipleri. Örn. "Roles for…" makalesinde gizli adlı AdvTT yazı tipleri → 264 satırın 196'sı orijinal kaldı; Demans kitabında Type3 (çizimle) Roboto yazıları korumalı, Merriweather/Myriad satırlarının 29'u sığmadı; nasr makalesinde Helvetica Neue Condensed tablo satırları (109) orijinal kaldı. Bu satırlar düzenlenirse seçilen yazı tipiyle yazılır (uyarı gösterilir).
 
 ### Aşama 3 — Sonraki fikirler
 - [ ] OCR (tesseract.js, Türkçe dil verisi)
@@ -127,6 +142,7 @@ Hedef: PDF içindeki yazıyı düzeltme (metni değiştirme). Fikir/gereksinimle
 
 ## 8. Oturum günlüğü
 
+- **Oturum 2 (2026-11-23):** Yazı düzeltme motoru (Aşama 2, adım 1–6) + `yazi-duzelt` sayfası (18. araç). `@pdf-lib/standard-fonts` doğrudan bağımlılık yapıldı (MIT; zaten pdf-lib ile geliyordu). `src/ui/arac.js` sonucu `ekler` (ek bölümler) alabiliyor. 146 test, 144 örnek kontrol geçti. `.claude/launch.json` (yerel önizleme ayarı, git dışı) yeniden yazıldı: `gelistirme` = `npm run dev`, port 5173.
 - **Oturum 1 (2026-11-23):** Proje sıfırdan kuruldu. Node.js + Git kuruldu (winget, kullanıcı onayıyla). Çekirdek + 17 araç sayfası + ana sayfa + hakkında sayfası yazıldı. 130 otomatik test ve 117 gerçek-PDF kontrolü geçti. Tarayıcıda elle denendi. README, MIT, üçüncü taraf lisanslar, Pages iş akışı hazır. GitHub'a **henüz yüklenmedi** (kullanıcı yükleyecek). Commit'ler yerel depoda.
 
 ## 9. Açık konular / kararlar

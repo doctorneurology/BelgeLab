@@ -24,6 +24,9 @@ import { damgaEkle } from '../src/core/damga.js';
 import { formAlanlari, formDoldur } from '../src/core/form.js';
 import { sifreEkle, sifreKaldir } from '../src/core/sifre.js';
 import { pdfdenResimler } from '../src/core/render.js';
+import { belgeAnaliz, SINIR } from '../src/core/yazi/analiz.js';
+import { yaziDuzelt, yaziAnalizEt } from '../src/core/yazi/motor.js';
+import { dogrula } from '../src/core/yazi/dogrulama.js';
 
 const VARSAYILAN = join(homedir(), 'Desktop', 'ornekler');
 const arg = process.argv[2];
@@ -209,6 +212,8 @@ async function dosyaIsle(yol) {
     return `${r.dosyalar[0].genislik}x${r.dosyalar[0].yukseklik}`;
   });
 
+  await yaziMotoruKontrolleri({ tam, k, klasor, kontrol, bilgi });
+
   await kontrol('Form alanları', async () => {
     const f = await formAlanlari(tam);
     bilgi.formAlani = f.alanlar.length;
@@ -222,6 +227,79 @@ async function dosyaIsle(yol) {
   });
 
   return { bilgi, sonuclar };
+}
+
+// --- Yazı düzeltme motoru (Aşama 2 / Oturum 2) ---------------------------------------------------
+// Özgün dosyanın ilk k sayfasında çalışır (sayfalar ayrılmaz; paylaşılan kaynaklar ve üst/alt bilgi gerçek hâliyle).
+async function yaziMotoruKontrolleri({ tam, k, klasor, kontrol, bilgi }) {
+  const sayfalar = [...Array(k).keys()];
+  const nolar = sayfalar.map((i) => i + 1);
+  let yaziYok = false;
+  const norm = (s) => s.normalize('NFKC').replace(/[\u0000-\u001f�?]/g, '?').replace(/\s+/g, '');
+
+  await kontrol(`Yazı motoru 1/3 — analiz: tüm yazı çözülüyor (pdf.js ile karşılaştırma), korumalar`, async () => {
+    const a = await belgeAnaliz(await pdfAc(tam), { sayfaDizinleri: sayfalar });
+    const glif = a.sayfalar.reduce((t, s) => t + s.parcalar.reduce((u, p) => u + p.glifler.length, 0), 0);
+    if (!glif) { yaziYok = true; throw new Atla('Bu sayfalarda yazı yok — taranmış (resim) belge olabilir; kapsam dışı (sonraki oturum)'); }
+    const pj = await belgeAc(tam);
+    const farkli = [];
+    for (const s of a.sayfalar) {
+      const tc = await (await pj.getPage(s.no)).getTextContent();
+      const p = norm(tc.items.map((x) => x.str).join(''));
+      const b = norm(s.parcalar.map((q) => q.glifler.map((g) => g.uni ?? '?').join('')).join(''));
+      if (p !== b) farkli.push(s.no);
+    }
+    await pj.kapat();
+    kos(!farkli.length, `sayfa ${farkli.join(', ')}: çıkarılan metin pdf.js'ten farklı`);
+    const satir = a.sayfalar.flatMap((s) => s.satirlar);
+    const koruma = {};
+    for (const l of satir) if (l.koruma) koruma[l.koruma] = (koruma[l.koruma] ?? 0) + 1;
+    const uyumsuz = satir.filter((l) => !l.koruma && l.uyum && !l.uyum.tamam).length;
+    const fontlar = [...a.fontlar.values()].filter((f) => f.oneri).map((f) => `${f.temelAd.replace(/^[A-Z]{6}\+/, '')}→${f.oneri.aile}(${f.oneri.tanindi})`);
+    bilgi.yaziAnaliz = { satir: satir.length, koruma, uyumsuz, fontlar };
+    return `${satir.length} satır; korumalı ${JSON.stringify(koruma)}; yazı tipi farkı yüzünden orijinal kalacak ${uyumsuz}`;
+  });
+  if (yaziYok) return;
+
+  await kontrol(`Yazı motoru 2/3 — değişiklik yok: (a) yazısız sayfalar piksel piksel AYNI, (b) satır sapması ≤ ${SINIR.konum} pt`, async () => {
+    const r = await yaziDuzelt(tam, { sayfalar });
+    writeFileSync(join(klasor, 'yazi-yeniden.pdf'), r.bayt);
+    const v = await dogrula(tam, r.bayt, { sayfalar: nolar, bindirme: true, olcek: 1.5 });
+    for (const s of v.sayfalar) pngKaydet(s.bindirme, join(klasor, `yazi-bindirme-s${s.no}.png`));
+    const px = v.sayfalar.filter((s) => s.pikselFark !== 0);
+    kos(!px.length, `yazısız karşılaştırmada fark: ${px.map((s) => `s${s.no}=${s.pikselFark}px`).join(', ')}`);
+    const en = Math.max(...v.sayfalar.map((s) => s.sapma.enBuyuk));
+    const asan = v.sayfalar.filter((s) => s.sapma.enBuyuk > SINIR.konum);
+    kos(!asan.length, `satır sapması sınırı aşıldı: ${asan.map((s) => `s${s.no}=${s.sapma.enBuyuk.toFixed(2)}pt`).join(', ')}`);
+    const olculen = v.sayfalar.reduce((t, s) => t + s.sapma.eslesen, 0), eslesmeyen = v.sayfalar.reduce((t, s) => t + s.sapma.eslesmeyen, 0);
+    kos(!eslesmeyen, `${eslesmeyen} satır çıktıda bulunamadı`);
+    bilgi.yaziRapor = r.rapor.map((x) => ({ ozet: x.ozet, yeniden: x.yeniden, korunan: x.korunan, kontrol: x.kontrol.map((c) => c.nedenler.join(' · ')) }));
+    bilgi.yaziDogrulama = v.sayfalar.map((s) => ({ no: s.no, pikselFark: s.pikselFark, enBuyukSapma: +s.sapma.enBuyuk.toFixed(3), olculen: s.sapma.eslesen }));
+    const yen = r.rapor.reduce((t, x) => t + x.yeniden, 0), top = r.rapor.reduce((t, x) => t + x.satir, 0);
+    return `piksel farkı 0 (${nolar.length} sayfa); en büyük sapma ${en.toFixed(3)} pt (${olculen} satır); yeniden yazılan ${yen}/${top} satır; ${r.rapor.map((x) => x.ozet).join('; ')}`;
+  });
+
+  await kontrol('Yazı motoru 3/3 — bir satır düzeltildi: yeni yazı yerinde, eski yazı dosyada yok, (a) yine sıfır fark', async () => {
+    const a = await yaziAnalizEt(tam, { sayfalar });
+    const l = a.sayfalar.flatMap((s) => s.satirlar).find((x) => !x.koruma && x.uyum?.tamam && x.metin.trim().split(/\s+/).length >= 3);
+    if (!l) throw new Atla('Düzeltilebilir (korumasız, yazı tipine sığan) satır yok');
+    const kel = l.metin.trim().split(/\s+/);
+    kel[kel.length - 1] = 'DÜZELTİLDİ';
+    const yeni = kel.join(' ');
+    const r = await yaziDuzelt(tam, { sayfalar, degisiklikler: { [l.id]: { metin: yeni } } });
+    writeFileSync(join(klasor, 'yazi-duzeltilmis.pdf'), r.bayt);
+    const pj = await belgeAc(r.bayt);
+    const t = norm((await (await pj.getPage(l.sayfa)).getTextContent()).items.map((x) => x.str).join(''));
+    await pj.kapat();
+    kos(t.includes(norm(yeni)), 'yeni yazı çıktıda bulunamadı');
+    const b = await yaziAnalizEt(r.bayt, { sayfalar: [l.sayfa - 1] });
+    const eskiSay = (o) => o.sayfalar.find((s) => s.no === l.sayfa).satirlar.filter((x) => x.metin === l.metin).length;
+    kos(eskiSay(b) === eskiSay(a) - 1, 'eski satır hâlâ duruyor');
+    const v = await dogrula(tam, r.bayt, { sayfalar: [l.sayfa] });
+    kos(v.sayfalar[0].pikselFark === 0, `yazısız karşılaştırmada ${v.sayfalar[0].pikselFark} piksel fark`);
+    const kontrolNotu = r.rapor.find((x) => x.no === l.sayfa).kontrol.find((c) => c.satirId === l.id);
+    return `sayfa ${l.sayfa}, ${l.hizalama} hizalı satırın son kelimesi değiştirildi${kontrolNotu ? ` (uyarı: ${kontrolNotu.nedenler.join(' · ')})` : ''}`;
+  });
 }
 
 // --- Çalıştır ve raporla -----------------------------------------------------------------------
@@ -252,6 +330,16 @@ for (const r of hepsi) {
   md += `## ${r.bilgi.dosya}\n\n- Boyut: ${r.bilgi.boyutKB} KB · Sayfa: ${r.bilgi.sayfaSayisi ?? '?'} · Özellikler: ${r.bilgi.ozellikler ?? '-'}\n\n| Kontrol | Sonuç | Not |\n|---|---|---|\n`;
   for (const s of r.sonuclar) md += `| ${s.isim} | ${s.durum} | ${String(s.not ?? '').replace(/\|/g, '/')} |\n`;
   md += '\n';
+  if (r.bilgi.yaziRapor) {
+    md += `**Yazı motoru — sayfa raporu** (yazı tipleri: ${r.bilgi.yaziAnaliz?.fontlar.join(', ')})\n\n`;
+    for (const s of r.bilgi.yaziRapor) {
+      md += `- ${s.ozet} — yeniden yazılan ${s.yeniden}, korunan ${s.korunan}\n`;
+      const sayac = {};
+      for (const k of s.kontrol) sayac[k] = (sayac[k] ?? 0) + 1;
+      for (const [k, n] of Object.entries(sayac)) md += `  - ${n} satır: ${k}\n`;
+    }
+    md += '\n';
+  }
 }
 writeFileSync(join(CIKTI, 'rapor.md'), md);
 writeFileSync(join(CIKTI, 'rapor.json'), JSON.stringify({ ozet, hepsi }, null, 2));

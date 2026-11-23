@@ -71,6 +71,35 @@ async function fontkitNesnesi(aile, stil) {
   return fontkit_onbellek.get(bayt);
 }
 
+/**
+ * Yazı tipini PDF'e gömmeden ölçmek için: genislik(metin) → 1/1000 em cinsinden (pdf-lib'in
+ * widthOfTextAtSize hesabıyla aynı yöntem), eksik(metin) → yazı tipinde olmayan karakterler.
+ */
+export async function yaziTipiOlcer(aile, stil = {}) {
+  const f = await fontkitNesnesi(aile, stil);
+  const olcek = 1000 / f.unitsPerEm;
+  const onbellek = new Map();
+  return {
+    genislik(metin) {
+      if (!onbellek.has(metin)) {
+        const { glyphs } = f.layout(metin);
+        let t = 0;
+        for (const g of glyphs) t += g.advanceWidth;
+        onbellek.set(metin, t * olcek);
+      }
+      return onbellek.get(metin);
+    },
+    eksik(metin) {
+      const e = [];
+      for (const ch of String(metin)) {
+        if (ch === ' ' || ch === ' ') continue;
+        if (!f.hasGlyphForCodePoint(ch.codePointAt(0))) e.push(ch);
+      }
+      return e;
+    },
+  };
+}
+
 /** Metindeki, bu yazı tipinde bulunmayan karakterlerin listesi. */
 export async function eksikKarakterler(aile, stil, metin) {
   const f = await fontkitNesnesi(aile, stil);

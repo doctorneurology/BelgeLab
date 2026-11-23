@@ -245,3 +245,36 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   .eylem .birincil { width: 100%; }
 }
 @media print { .ustcubuk, .altbilgi { display: none; } }
+
+/* ---- Yazı düzelt ---- */
+.yd-sahne { touch-action: auto; }
+.yd-kutu { position: absolute; min-height: 0; min-width: 0; padding: 0; margin: 0; border-radius: 2px; background: transparent; border: 1px solid transparent; cursor: pointer; box-shadow: none; }
+.yd-kutu.yd-normal:hover, .yd-kutu.yd-normal:focus-visible { border-color: var(--vurgu); background: rgba(36, 86, 214, 0.10); }
+.yd-kutu.yd-duzenlendi { border-color: #1f9d55; background: rgba(31, 157, 85, 0.16); }
+.yd-kutu.yd-kontrol { border-color: #e08a00; background: rgba(224, 138, 0, 0.12); }
+.yd-kutu.yd-korumali { border: 1px dashed #8a93a5; background: rgba(120, 130, 150, 0.10); cursor: help; }
+.yd-kutu.yd-secili { outline: 2px solid #ff3b30; outline-offset: 1px; }
+.yd-lejant { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 0.9rem; }
+.yd-ornek { display: inline-block; width: 14px; height: 10px; border-radius: 2px; vertical-align: middle; }
+.yd-ornek.yd-normal { border: 1px solid var(--vurgu); background: rgba(36, 86, 214, 0.10); }
+.yd-ornek.yd-duzenlendi { border: 1px solid #1f9d55; background: rgba(31, 157, 85, 0.16); }
+.yd-ornek.yd-kontrol { border: 1px solid #e08a00; background: rgba(224, 138, 0, 0.12); }
+.yd-ornek.yd-korumali { border: 1px dashed #8a93a5; background: rgba(120, 130, 150, 0.10); }
+.yd-panel { border: 1px solid var(--kenar); border-radius: var(--yaricap); background: var(--yuzey); padding: 12px 14px; margin: 10px 0; box-shadow: var(--golge); }
+.yd-panel h3 { margin: 0 0 6px; }
+.yd-orijinal { overflow-wrap: anywhere; }
+.yd-liste ol { padding-left: 22px; }
+.yd-liste li { margin-bottom: 6px; overflow-wrap: anywhere; }
+.yd-liste del { color: #b23b3b; }
+.yd-liste ins { color: #1f7a45; text-decoration: none; font-weight: 600; }
+.yd-fontlar { margin: 8px 0; }
+.yd-fontlar summary { cursor: pointer; font-weight: 600; }
+.tablo-kap { overflow-x: auto; }
+.yd-tablo { border-collapse: collapse; margin-top: 6px; font-size: 0.92rem; }
+.yd-tablo th, .yd-tablo td { border-bottom: 1px solid var(--kenar); padding: 4px 8px; text-align: left; vertical-align: middle; }
+.yd-tablo select { max-width: 260px; }
+.yd-rapor { margin: 10px 0; }
+.yd-rapor summary { cursor: pointer; font-weight: 600; }
+.yd-rapor ul ul { margin: 2px 0 6px; font-size: 0.9rem; }
+.yd-dogrula { margin-top: 12px; }
+.yd-bindirme { max-width: 100%; height: auto; }

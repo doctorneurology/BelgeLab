@@ -10,6 +10,7 @@ Bu projenin kendi kodu **MIT** lisanslıdır (bkz. `LICENSE`). Aşağıdaki bile
 | [pdf.js](https://github.com/mozilla/pdf.js) (`pdfjs-dist`) | 6.x | Apache-2.0 | PDF sayfalarını ekrana çizme (önizleme, resme çevirme) |
 | [pdf-lib](https://github.com/Hopding/pdf-lib) | 1.17.x | MIT | PDF oluşturma ve düzenleme |
 | [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) | 1.1.x | MIT | Yazı tiplerini PDF'e gömme |
+| [@pdf-lib/standard-fonts](https://github.com/Hopding/standard-fonts) | 1.0.x | MIT | Standart 14 PDF yazı tipinin genişlik tabloları (yazı düzeltme motoru) |
 | [qpdf](https://github.com/qpdf/qpdf) 12.2 (WebAssembly; `@neslinesli93/qpdf-wasm` ile) | 12.2.0 / 0.3.x | Apache-2.0 (qpdf), ISC (WASM paketleyici) | Şifre ekleme / şifre kaldırma |
 | [tesseract.js](https://github.com/naptha/tesseract.js) | 7.x | Apache-2.0 | OCR (sonraki aşamalarda kullanılacak; henüz arayüzde yok) |
 | [docx](https://github.com/dolanmiu/docx) | 9.x | MIT | Word çıktısı (sonraki aşamalarda kullanılacak; henüz arayüzde yok) |

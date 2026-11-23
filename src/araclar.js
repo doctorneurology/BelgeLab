@@ -14,6 +14,7 @@ export const ARACLAR = [
   { slug: 'sayfa-sirala', grup: 'duzenle', ikon: '🔀', ad: 'Sayfa sırala', kisa: 'Sayfaların sırasını değiştir.' },
   { slug: 'sayfa-dondur', grup: 'duzenle', ikon: '🔄', ad: 'Sayfa döndür', kisa: 'Yan ya da ters duran sayfaları düzelt.' },
   { slug: 'sayfa-cikar', grup: 'duzenle', ikon: '📤', ad: 'Sayfa çıkar', kisa: 'Seçtiğin sayfalardan yeni bir PDF yap.' },
+  { slug: 'yazi-duzelt', grup: 'duzenle', ikon: '🔤', ad: 'Yazı düzelt', kisa: 'PDF içindeki yazıyı düzelt; sayfa düzeni, logo ve çizgiler olduğu gibi kalır.' },
   { slug: 'kirp', grup: 'duzenle', ikon: '📐', ad: 'Kırp', kisa: 'Sayfa kenarlarındaki boşluğu ya da fazlalığı kes.' },
   { slug: 'sayfa-numarasi', grup: 'ekle', ikon: '🔢', ad: 'Sayfa numarası ekle', kisa: 'Sayfalara numara yaz (1, 2, 3 ya da I, II, III).' },
   { slug: 'ust-alt-bilgi', grup: 'ekle', ikon: '📑', ad: 'Üst / alt bilgi ekle', kisa: 'Sayfa başına ya da sonuna yazı, tarih, dosya adı ekle.' },

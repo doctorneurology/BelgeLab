@@ -7,7 +7,7 @@ Tarayıcıda çalışan, **sunucusuz**, açık kaynaklı (MIT) bir PDF araçlar�
 
 | Grup | Araçlar |
 |---|---|
-| Sayfaları düzenle | PDF birleştir · PDF böl · Sayfa sil · Sayfa sırala · Sayfa döndür · Sayfa çıkar · Kırp |
+| Sayfaları düzenle | PDF birleştir · PDF böl · Sayfa sil · Sayfa sırala · Sayfa döndür · Sayfa çıkar · Kırp · **Yazı düzelt** (sayfa düzeni aynen kalır; metin tabanlı PDF) |
 | Belgeye ekle | Sayfa numarası · Üst/alt bilgi · Filigran ekle (ve **kendi eklediğini** geri al) · Görünür imza / metin kutusu · Form doldur |
 | Dönüştür | Resimden PDF · PDF'ten resim (PNG/JPEG, ZIP) |
 | Şifre | Şifre ekle (AES-256) · Şifre kaldır (**yalnızca şifre biliniyorsa**) |

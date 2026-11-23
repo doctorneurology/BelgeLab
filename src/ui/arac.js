@@ -252,7 +252,7 @@ export function aracKur(tanim) {
     calistirDugmesi.disabled = !hazir || kilitli;
   }
 
-  function sonucuGoster({ ciktilar = [], uyarilar = [], mesaj = '', bilgiler = [] }) {
+  function sonucuGoster({ ciktilar = [], uyarilar = [], mesaj = '', bilgiler = [], ekler = [] }) {
     const parcalar = [];
     const baslik = h('h2', { tabindex: '-1' }, ciktilar.length ? 'Hazır' : 'Sonuç');
     parcalar.push(baslik);
@@ -276,6 +276,7 @@ export function aracKur(tanim) {
           type: 'button', class: 'birincil', onclick: () => indir(zipOlustur(ciktilar.map((c) => ({ ad: c.ad, bayt: c.bayt }))), `${tanim.slug}-cikti.zip`),
         }, `⬇ Hepsini ZIP olarak indir (${ciktilar.length} dosya)`)));
       }
+      parcalar.push(...ekler);
       const ilkPdf = ciktilar.find((c) => c.ad.toLowerCase().endsWith('.pdf'));
       if (ilkPdf && tanim.onizleme !== false) parcalar.push(pdfOnizleme(ilkPdf.bayt));
       const ilkResim = ciktilar.find((c) => /\.(png|jpe?g)$/i.test(c.ad));

@@ -1,4 +1,4 @@
-// Her araç için küçük bir HTML sayfası üretir (ana sayfa, hakkında ve 17 araç).
+// Her araç için küçük bir HTML sayfası üretir (ana sayfa, hakkında ve tüm araçlar).
 // Sayfaların içeriği betikler tarafından doldurulur; bu dosyalar yalnızca "kabuk"tur.
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
