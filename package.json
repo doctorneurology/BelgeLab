@@ -9,7 +9,7 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "predev": "node tools/pdfjs-varliklari.mjs",
+    "predev": "node tools/pdfjs-varliklari.mjs && node tools/sayfalari-uret.mjs",
     "dev": "vite",
     "prebuild": "node tools/pdfjs-varliklari.mjs && node tools/sayfalari-uret.mjs",
     "build": "vite build",

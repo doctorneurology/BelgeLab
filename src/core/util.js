@@ -46,6 +46,19 @@ export function sayfaAraligiCoz(metin, sayfaSayisi, { tekrarIzinli = true } = {}
   return sonuc;
 }
 
+/** [0,1,2,4,6,7] → "1-3, 5, 7-8" (0 tabanlı dizinlerden, insan okuyabilir aralık metni) */
+export function aralikMetni(dizinler) {
+  const s = [...new Set(dizinler)].sort((a, b) => a - b);
+  const parcalar = [];
+  for (let i = 0; i < s.length; ) {
+    let j = i;
+    while (j + 1 < s.length && s[j + 1] === s[j] + 1) j++;
+    parcalar.push(j > i ? `${s[i] + 1}-${s[j] + 1}` : `${s[i] + 1}`);
+    i = j + 1;
+  }
+  return parcalar.join(', ');
+}
+
 /** Boş bırakılırsa tüm sayfalar; yoksa aralık metninin dizinleri (tekrarsız, artan sırada). */
 export function sayfaSecimi(metin, sayfaSayisi) {
   if (metin == null || String(metin).trim() === '') {

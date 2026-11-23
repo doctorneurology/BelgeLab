@@ -1,5 +1,6 @@
 node_modules/
 dist/
+public/pdfjs/
 coverage/
 
 # Örnek PDF testlerinin çıktıları (kişisel belgelerden üretildiği için ASLA depoya girmez)
@@ -10,6 +11,7 @@ test-ciktilari/
 ornekler/
 *.local.pdf
 
+.claude/
 .DS_Store
 Thumbs.db
 *.log
