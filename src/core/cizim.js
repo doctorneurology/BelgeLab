@@ -143,6 +143,19 @@ export class SayfaCizici {
     this.ops.push(op.join('\n'));
   }
 
+  /**
+   * GÖRÜNMEZ yazı (çizim kipi 3): ekranda hiçbir şey çizmez ama aranabilir/seçilebilir. OCR katmanı için.
+   * (x, y) = taban çizgisinin sol ucu; genislik verilirse yazı bu genişliğe (Tz ile) oturtulur.
+   * Sonuna bir boşluk eklenir ki metin kopyalanırken kelimeler yapışmasın.
+   */
+  gorunmezMetin({ font, metin, boyut, x, y, genislik = 0 }) {
+    const fAd = this._fontAdi(font);
+    const olculen = font.widthOfTextAtSize(metin, boyut);
+    const tz = genislik > 0 && olculen > 0 ? Math.max(10, Math.min(400, (genislik / olculen) * 100)) : 100;
+    this.ops.push(['BT', '3 Tr', `/${fAd} ${sayi(boyut)} Tf`, `${sayi(tz)} Tz`, `1 0 0 1 ${sayi(x)} ${sayi(y)} Tm`,
+      `${font.encodeText(`${metin} `).toString()} Tj`, 'ET'].join('\n'));
+  }
+
   /** Sol-alt köşesi (x, y), boyutu (w, h) olan resim. aci: sol-alt köşe etrafında döndürme. */
   resim({ resim, x, y, w, h, aci = 0, opaklik = 1 }) {
     const ad = this._resimAdi(resim);

@@ -10,7 +10,7 @@ describe('Site yapısı: her araç için sayfa ve betik var', () => {
     const slugs = ARACLAR.map((a) => a.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const a of ARACLAR) expect(GRUPLAR.map((g) => g.id)).toContain(a.grup);
-    expect(ARACLAR.length).toBe(18);
+    expect(ARACLAR.length).toBe(23);
   });
 
   for (const a of ARACLAR) {

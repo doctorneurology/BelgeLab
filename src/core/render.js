@@ -15,7 +15,7 @@ function ortam() {
 }
 
 /** pdf.js ile belgeyi açar. Şifreliyse SifreliPdfHatasi / YanlisSifreHatasi fırlatır. */
-export async function belgeAc(bayt, { sifre } = {}) {
+export async function belgeAc(bayt, { sifre, ek = {} } = {}) {
   const { pdfjs, belgeSecenekleri } = ortam();
   const gorev = pdfjs.getDocument({
     data: bayt.slice(), // pdf.js diziyi devralabilir; özgün veriyi koru
@@ -23,6 +23,7 @@ export async function belgeAc(bayt, { sifre } = {}) {
     isEvalSupported: false,
     verbosity: 0,
     ...belgeSecenekleri,
+    ...ek, // ör. { fontExtraProperties: true } → gerçek yazı tipi adları
   });
   try {
     const belge = await gorev.promise;
@@ -35,6 +36,11 @@ export async function belgeAc(bayt, { sifre } = {}) {
     }
     throw new PdfHatasi(`PDF görüntülenemedi: ${e?.message ?? e}`, 'BOZUK');
   }
+}
+
+/** Çizilmiş bir tuvali PNG/JPEG baytlarına çevirir (ortama göre). */
+export async function tuvaliBayta(tuval, bicim = 'png', kalite = 0.92) {
+  return ortam().tuvaliBayta(tuval, bicim, kalite);
 }
 
 export const EN_COK_PIKSEL = 40_000_000;
@@ -87,4 +93,24 @@ export async function pdfdenResimler(bayt, dosyaAdi, { sayfalar = '', dpi = 150,
   } finally {
     await belge.kapat();
   }
+}
+
+/** pdf.js işlem kodları (OPS): sayfadaki resimlerin yerini bulmak için. */
+export function pdfjsOps() {
+  return ortam().pdfjs.OPS;
+}
+
+/** Tuval üretimi (ortama göre). Resim dönüştürme yardımcıları kullanır. */
+export function tuvalOlustur(w, h) {
+  return ortam().tuvalOlustur(w, h);
+}
+
+/**
+ * Sıkıştırılmış resim baytlarını (JPEG/PNG) çözer. Ortam sağlar.
+ * @returns {{genislik, yukseklik, cizilebilir}}  cizilebilir: tuvalin drawImage'ına verilebilir nesne
+ */
+export async function resimCoz(bayt) {
+  const o = ortam();
+  if (!o.resimCoz) throw new PdfHatasi('Resim çözme bileşeni hazır değil.');
+  return o.resimCoz(bayt);
 }

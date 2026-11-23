@@ -1,6 +1,7 @@
 // Yazı düzelt: sayfadaki yazıya tıkla, düzelt; sayfa düzeni (logo, çizgi, imza alanı...) aynen kalır.
 import { aracKur } from '../ui/arac.js';
 import { h, kutu, boyamaBekle } from '../ui/yardim.js';
+import { hizliGecis } from '../ui/hizli-gecis.js';
 import { belgeAc } from '../core/render.js';
 import { sayfayiCiz } from '../ui/onizleme.js';
 import { yaziAnalizEt, yaziDuzelt } from '../core/yazi/motor.js';
@@ -24,7 +25,9 @@ aracKur({
   notlar: [kutu('bilgi', h('span', {},
     'Sayfanın kendisi (boyut, kenar boşlukları, logo, çizgiler, arka plan, imza ve form alanları, bağlantılar) değişmez. ',
     'Yalnızca yazılar, orijinal yazı tipinin ölçü uyumlu açık karşılığıyla aynı yerlerine yeniden yazılır. ',
-    'Taranmış (resim) belgeler henüz desteklenmiyor.'))],
+    'Belge taranmış (resim) ise bu araç çalışmaz; aşağıdaki “Taranmış belgede yazı düzelt” aracını kullanın.')),
+  hizliGecis('Yardımcı araçlar', ['taranmis-duzelt', 'ocr', 'pdf-word', 'sikistir', 'karart', 'sayfa-sil', 'sayfa-sirala', 'sayfa-dondur', 'kirp'],
+    '(dosyayı o sayfada yeniden seçersiniz; dosyalarınız hiçbir yere gönderilmez)')],
   ayar() {
     const st = {
       bayt: null, ad: '', ozet: null, belge: null, no: 1, secili: null,
@@ -69,7 +72,11 @@ aracKur({
       const korumali = tum.filter((l) => l.koruma && l.koruma !== 'cozulemedi').length;
       const kontrol = tum.filter((l) => l.koruma === 'cozulemedi' || (!l.koruma && l.uyum && !l.uyum.tamam)).length;
       const parcalar = [];
-      if (!st.ozet.yaziVar) parcalar.push(kutu('uyari', 'Bu sayfalarda düzeltilebilir yazı bulunamadı. Belge taranmış (resim) olabilir; taranmış belgeler için destek bir sonraki sürümde gelecek.'));
+      if (!st.ozet.yaziVar) {
+        parcalar.push(kutu('uyari', h('div', {},
+          h('p', {}, 'Bu sayfalarda düzeltilebilir yazı bulunamadı. Belge taranmış (resim) olabilir. Taranmış belgede yalnızca seçtiğiniz bölgeyi düzeltebilirsiniz:'),
+          hizliGecis('Taranmış belge için', ['taranmis-duzelt', 'ocr', 'pdf-word']))));
+      }
       if (st.ozet.imzali) parcalar.push(kutu('uyari', h('span', {}, h('b', {}, 'Bu belge dijital olarak imzalı. '), 'Yazı değiştirilince imza geçersiz olur. Çıktı İMZASIZ yeni bir dosya olacaktır; imza alanının görünümü sayfada kalır ama dijital imza değildir.')));
       parcalar.push(kutu('bilgi', `${tum.length} satır bulundu. ${korumali} satır korumalı (üst/alt bilgi, logo, süslü ya da döndürülmüş yazı) ve orijinal kalacak.`
         + (kontrol ? ` ${kontrol} satır yeni yazı tipine sığmadığı için orijinal bırakılacak (turuncu).` : '')));
@@ -268,7 +275,11 @@ aracKur({
       ciktilar: [cikti],
       mesaj: `${duzenlenen} satır değiştirildi; ${r.rapor.reduce((t, s) => t + s.yeniden, 0)} satır aynen yeniden yazıldı.`,
       uyarilar: r.uyarilar,
-      ekler: [raporGoster(r.rapor, kontrol), dogrulamaBolumu(sonOrijinal ?? d.bayt, r.bayt, r.rapor)],
+      ekler: [
+        raporGoster(r.rapor, kontrol), dogrulamaBolumu(sonOrijinal ?? d.bayt, r.bayt, r.rapor),
+        hizliGecis('Sonra ne yapmak istersiniz?', ['sikistir', 'karart', 'pdf-word', 'sayfa-sil', 'sayfa-sirala', 'sayfa-dondur', 'kirp', 'sifre-ekle'],
+          '(düzeltilmiş dosyayı indirip o sayfada yeniden seçin)'),
+      ],
     };
   },
 });

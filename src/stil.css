@@ -278,3 +278,29 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .yd-rapor ul ul { margin: 2px 0 6px; font-size: 0.9rem; }
 .yd-dogrula { margin-top: 12px; }
 .yd-bindirme { max-width: 100%; height: auto; }
+
+/* ---- Hızlı geçiş bağlantıları ---- */
+.hizli-gecis { margin: 12px 0; padding: 10px 12px; border: 1px dashed var(--kenar); border-radius: var(--yaricap); background: var(--yuzey); }
+.hizli-gecis ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.hizli-gecis li a { display: inline-block; padding: 4px 10px; border: 1px solid var(--kenar); border-radius: 999px; background: var(--yuzey-2); color: var(--metin); text-decoration: none; font-size: 0.92rem; }
+.hizli-gecis li a:hover, .hizli-gecis li a:focus-visible { border-color: var(--vurgu); color: var(--vurgu); }
+
+/* ---- Bölge seçici (karartma / taranmış belgede düzeltme) ---- */
+.bs-sahne { cursor: crosshair; }
+.bs-sahne.bs-kaydir { touch-action: pan-y pinch-zoom; cursor: default; }
+.bs-kutu { position: absolute; border: 2px solid #ff3b30; background: rgba(255, 59, 48, 0.22); cursor: pointer; line-height: 1; }
+.bs-kutu.secili { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+.bs-kutu.bs-otomatik { background: rgba(255, 59, 48, 0.32); border-style: dashed; }
+.bs-sil { position: absolute; top: -12px; right: -12px; width: 24px; height: 24px; min-height: 0; min-width: 0; padding: 0; border-radius: 50%; font-size: 12px; line-height: 1; background: #ff3b30; color: #fff; border: 2px solid #fff; cursor: pointer; }
+.bs-gecici { position: absolute; border: 2px dashed var(--vurgu); background: rgba(36, 86, 214, 0.15); pointer-events: none; }
+.bs-oneri { position: absolute; min-height: 0; min-width: 0; padding: 0; margin: 0; border: 1px dashed #2456d6; background: rgba(36, 86, 214, 0.10); border-radius: 2px; cursor: pointer; box-shadow: none; }
+.bs-oneri:hover, .bs-oneri:focus-visible { background: rgba(36, 86, 214, 0.28); }
+.bs-liste-ul { padding-left: 20px; }
+.kr-arama { margin: 8px 0 12px; }
+.kr-arama summary { cursor: pointer; font-weight: 600; }
+.td-liste { display: grid; gap: 10px; margin: 10px 0; }
+.td-kart { border: 1px solid var(--kenar); border-radius: var(--yaricap); background: var(--yuzey); padding: 10px 12px; }
+.td-kart.secili { border-color: var(--vurgu); box-shadow: 0 0 0 2px rgba(36, 86, 214, 0.2); }
+.td-baslik { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.td-baslik b { flex: 1; }
+.td-eski del { color: #b23b3b; overflow-wrap: anywhere; }

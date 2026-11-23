@@ -12,7 +12,7 @@ import { readdirSync, readFileSync, statSync, mkdirSync, writeFileSync, rmSync }
 import { join, basename, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { PDFDocument } from 'pdf-lib';
-import { karsilastir, sayfaPikselleri, pngKaydet, doluluk } from './karsilastir.mjs';
+import { karsilastir, sayfaPikselleri, pngKaydet, doluluk, metinCikar } from './karsilastir.mjs';
 import { belgeAc } from '../src/core/render.js';
 import { SifreliPdfHatasi } from '../src/core/hatalar.js';
 import { pdfAc, belgeOzellikleri } from '../src/core/belge.js';
@@ -27,6 +27,12 @@ import { pdfdenResimler } from '../src/core/render.js';
 import { belgeAnaliz, SINIR } from '../src/core/yazi/analiz.js';
 import { yaziDuzelt, yaziAnalizEt } from '../src/core/yazi/motor.js';
 import { dogrula } from '../src/core/yazi/dogrulama.js';
+import { sikistir } from '../src/core/sikistir.js';
+import { pdfdenWord } from '../src/core/pdf-word.js';
+import { karart, karartmaAra } from '../src/core/karart.js';
+import { pdfOcr, ocrKapat } from '../src/core/ocr.js';
+import { sayfaCiz, tuvaliBayta } from '../src/core/render.js';
+import JSZip from 'jszip';
 
 const VARSAYILAN = join(homedir(), 'Desktop', 'ornekler');
 const arg = process.argv[2];
@@ -213,6 +219,7 @@ async function dosyaIsle(yol) {
   });
 
   await yaziMotoruKontrolleri({ tam, k, klasor, kontrol, bilgi });
+  await yeniAraclarKontrolleri({ kaynak, k, klasor, kontrol });
 
   await kontrol('Form alanları', async () => {
     const f = await formAlanlari(tam);
@@ -299,6 +306,87 @@ async function yaziMotoruKontrolleri({ tam, k, klasor, kontrol, bilgi }) {
     kos(v.sayfalar[0].pikselFark === 0, `yazısız karşılaştırmada ${v.sayfalar[0].pikselFark} piksel fark`);
     const kontrolNotu = r.rapor.find((x) => x.no === l.sayfa).kontrol.find((c) => c.satirId === l.id);
     return `sayfa ${l.sayfa}, ${l.hizalama} hizalı satırın son kelimesi değiştirildi${kontrolNotu ? ` (uyarı: ${kontrolNotu.nedenler.join(' · ')})` : ''}`;
+  });
+}
+
+
+// --- OCR, Word, sıkıştırma, karartma (Oturum 3) ----------------------------------------------------
+const kelimeler = (m) => new Set((m.toLocaleLowerCase('tr').match(/\p{L}{4,}/gu) ?? []));
+
+async function yeniAraclarKontrolleri({ kaynak, k, klasor, kontrol }) {
+  let metinler = null;
+  const yaziVar = async () => { metinler ??= await metinCikar(kaynak); return metinler.join(' ').replace(/\s+/g, '').length > 100; };
+
+  await kontrol('Sıkıştır (dengeli): dosya büyümez, yazı aynı, sayfa 1 görüntüsü yakın', async () => {
+    const r = await sikistir(kaynak, { duzey: 'dengeli' });
+    kos(r.bayt.length <= kaynak.length, 'çıktı özgünden büyük');
+    writeFileSync(join(klasor, 'sikistirilmis.pdf'), r.bayt);
+    const a = await metinCikar(kaynak), b = await metinCikar(r.bayt);
+    kos(JSON.stringify(a) === JSON.stringify(b), 'sıkıştırma yazıyı değiştirdi');
+    const A = await sayfaPikselleri(kaynak, 1, { olcek: 1 }), B = await sayfaPikselleri(r.bayt, 1, { olcek: 1 });
+    kos(A.genislik === B.genislik && A.yukseklik === B.yukseklik, 'sayfa boyutu değişti');
+    let t = 0; for (let i = 0; i < A.veri.length; i += 4) t += Math.abs(A.veri[i] - B.veri[i]) + Math.abs(A.veri[i + 1] - B.veri[i + 1]) + Math.abs(A.veri[i + 2] - B.veri[i + 2]);
+    const ort = t / (A.veri.length / 4 * 3);
+    kos(ort < 6, `sayfa 1 görüntü farkı büyük (ortalama ${ort.toFixed(2)}/255)`);
+    return `${Math.round(kaynak.length / 1024)} KB → ${Math.round(r.bayt.length / 1024)} KB (%${r.rapor.tasarrufYuzde}); resim ${r.rapor.resimYenilenen}/${r.rapor.resimToplam}; ortalama görüntü farkı ${ort.toFixed(2)}/255`;
+  });
+
+  await kontrol('PDF → Word: geçerli .docx, yazı kapsamı ≥ %80', async () => {
+    if (!(await yaziVar())) throw new Atla('Belgede seçilebilir yazı yok');
+    const r = await pdfdenWord(kaynak, { ocr: 'yok' });
+    writeFileSync(join(klasor, 'word.docx'), r.bayt);
+    const zip = await JSZip.loadAsync(r.bayt);
+    const xml = await zip.file('word/document.xml').async('string');
+    const docxMetin = [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join(' ');
+    const gercek = kelimeler(metinler.join(' ')), docx = kelimeler(docxMetin);
+    let var_ = 0; for (const w of gercek) if (docx.has(w)) var_++;
+    const oran = gercek.size ? var_ / gercek.size : 1;
+    kos(oran >= 0.8, `yazı kapsamı düşük: %${(oran * 100).toFixed(1)}`);
+    const b = r.bilgi;
+    return `kapsam %${(oran * 100).toFixed(1)}; ${b.paragraf} paragraf, ${b.baslik} başlık, ${b.tablo} tablo, ${b.resim} resim${b.sutunluSayfa ? `, ${b.sutunluSayfa} sütunlu sayfa` : ''}`;
+  });
+
+  await kontrol('Karart (metin araması): aranan yazı çıktıda yok; eşleşmeyen sayfalar aynı', async () => {
+    if (!(await yaziVar())) throw new Atla('Belgede seçilebilir yazı yok');
+    const aday = [...kelimeler(metinler[0])].filter((w) => w.length >= 8).sort((x, y) => y.length - x.length)[0];
+    if (!aday) throw new Atla('1. sayfada uygun kelime yok');
+    const b = await karartmaAra(kaynak, [aday]);
+    kos(b.eslesmeler.length >= 1, 'aranan kelime bulunamadı');
+    const r = await karart(kaynak, { ara: [aday], dpi: 100 });
+    writeFileSync(join(klasor, 'karartilmis.pdf'), r.bayt);
+    kos(r.rapor.dogrulama.gecti, 'doğrulama geçmedi');
+    const sonra = (await metinCikar(r.bayt)).join(' ').toLocaleLowerCase('tr');
+    kos(!sonra.includes(aday), 'aranan kelime çıktıda hâlâ var');
+    const eslesenSayfalar = new Set(b.eslesmeler.map((e) => e.sayfa));
+    for (let i = 1; i <= k; i++) {
+      if (eslesenSayfalar.has(i)) continue;
+      const f = karsilastir(await sayfaPikselleri(kaynak, i, { olcek: OLCEK }), await sayfaPikselleri(r.bayt, i, { olcek: OLCEK }));
+      kos(f.farkliPiksel === 0, `eşleşmeyen sayfa ${i} değişti`);
+    }
+    return `"${aday}" ${b.eslesmeler.length} yerde bulundu ve karartıldı (${eslesenSayfalar.size} sayfa)`;
+  });
+
+  await kontrol('OCR: sayfa 1 resme çevrilip (sahte tarama) okunur; sözcüklerin en az %60 bulunur', async () => {
+    if (!(await yaziVar())) throw new Atla('Belgede seçilebilir yazı yok');
+    const belge = await belgeAc(kaynak);
+    const { tuval } = await sayfaCiz(belge, 1, { olcek: 200 / 72 });
+    await belge.kapat();
+    const doc = await PDFDocument.create();
+    const jpg = await doc.embedJpg(await tuvaliBayta(tuval, 'jpeg', 0.85));
+    const vpPdf = await pdfAc(kaynak);
+    const sy = vpPdf.getPage(0);
+    const p = doc.addPage([sy.getWidth(), sy.getHeight()]);
+    p.drawImage(jpg, { x: 0, y: 0, width: sy.getWidth(), height: sy.getHeight() });
+    const tarama = new Uint8Array(await doc.save());
+    const r = await pdfOcr(tarama, { dpi: 300 });
+    writeFileSync(join(klasor, 'sahte-tarama-aranabilir.pdf'), r.bayt);
+    const okunan = kelimeler((await metinCikar(r.bayt))[0]);
+    const gercek = kelimeler(metinler[0]);
+    let bulunan = 0; for (const w of gercek) if (okunan.has(w)) bulunan++;
+    const oran = gercek.size ? bulunan / gercek.size : 1;
+    await ocrKapat();
+    kos(oran >= 0.6, `OCR sözcük kapsamı düşük: %${(oran * 100).toFixed(1)}`);
+    return `sözcük kapsamı %${(oran * 100).toFixed(1)} (${bulunan}/${gercek.size}); ortalama güven %${r.rapor[0].guven}`;
   });
 }
 

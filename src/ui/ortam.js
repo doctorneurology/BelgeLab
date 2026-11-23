@@ -16,6 +16,10 @@ renderOrtamiAyarla({
     c.height = h;
     return c;
   },
+  resimCoz: async (bayt) => {
+    const im = await createImageBitmap(new Blob([bayt]));
+    return { genislik: im.width, yukseklik: im.height, cizilebilir: im };
+  },
   tuvaliBayta: (tuval, bicim, kalite) =>
     new Promise((coz, red) => {
       tuval.toBlob(
@@ -38,4 +42,20 @@ export async function sifreModulu() {
   const m = await import('../core/sifre.js');
   m.qpdfWasmAyarla(new URL(qpdfWasmUrl, document.baseURI).href);
   return m;
+}
+
+let ocrHazirMi = false;
+/**
+ * OCR bileşenini (tesseract.js + Türkçe dil verisi) yalnızca gerektiğinde yükler.
+ * Tüm dosyalar sitenin kendi klasöründedir (public/tesseract); internetten bir şey indirilmez.
+ */
+export async function ocrHazirla() {
+  if (ocrHazirMi) return;
+  const [{ ocrOrtamiAyarla }, T] = await Promise.all([import('../core/ocr.js'), import('tesseract.js')]);
+  const mutlak = (yol) => new URL(`tesseract/${yol}`, document.baseURI).href;
+  ocrOrtamiAyarla({
+    createWorker: T.createWorker ?? T.default?.createWorker,
+    secenekler: { workerPath: mutlak('worker.min.js'), corePath: mutlak('core'), langPath: mutlak('lang'), cacheMethod: 'none', gzip: true },
+  });
+  ocrHazirMi = true;
 }

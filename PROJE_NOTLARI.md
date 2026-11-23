@@ -1,7 +1,7 @@
 # PROJE NOTLARI — PDF Araçları
 
 > **Her oturumun başında bu dosya okunur. Her aşama bitince güncellenir.**
-> Son güncelleme: 2026-11-23 (Oturum 2 sonu — yazı düzeltme motoru)
+> Son güncelleme: 2026-11-23 (Oturum 3 sonu — OCR, taranmış belgede düzeltme, PDF→Word, sıkıştırma, gerçek karartma, GitHub hazırlığı)
 
 ## 1. Proje nedir?
 
@@ -35,8 +35,8 @@ Tarayıcıda çalışan, **sunucusuz**, GitHub Pages ile yayınlanabilir, **aç�
 | PDF'i ekrana çizme | pdf.js (`pdfjs-dist` 6.x) | Apache-2.0 |
 | PDF oluşturma/düzenleme | pdf-lib 1.17 + `@pdf-lib/fontkit` | MIT |
 | Şifre ekleme/kaldırma (WASM) | qpdf 12.2 WASM (`@neslinesli93/qpdf-wasm`) | Apache-2.0 / ISC |
-| OCR (sonraki oturumlar) | tesseract.js 7 (+ Türkçe dil verisi eklenecek) | Apache-2.0 |
-| Word çıktısı (sonraki oturumlar) | docx 9 | MIT |
+| OCR | tesseract.js 7 + `tesseract.js-core` (WASM) + Türkçe dil verisi (`@tesseract.js-data/tur`, `4.0.0_best_int`, ~2 MB; devDependency, derlemede `public/tesseract/` altına kopyalanır) — hepsi sitenin kendi dosyası, CDN yok | Apache-2.0 (veri paketleyicisi MIT) |
+| Word çıktısı | docx 9 (tarayıcıda gerektiğinde `import('docx')` ile yüklenir) | MIT |
 | Test | Vitest, `@napi-rs/canvas`, pixelmatch, pngjs, jszip | MIT/ISC |
 | Yazı tipleri | Liberation, Carlito, Caladea, Noto (`public/fonts/`, lisans dosyalarıyla) | SIL OFL 1.1 |
 | Yayın | GitHub Actions → GitHub Pages (`.github/workflows/yayin.yml`: test → derle → yayınla) | — |
@@ -70,6 +70,16 @@ Ayrıntılı lisans listesi: `THIRD_PARTY_LICENSES.md`.
    - Arayüz: `src/sayfalar/yazi-duzelt.js` (sayfaya tıkla-düzelt, değişiklik listesi, yazı tipi eşleme tablosu, üst/alt bilgi kilidi, sığma uyarısı, sayfa raporu, doğrulama + bindirme). 40 sayfadan uzun belgelerde sayfa aralığı seçilir.
    - Testler: `tests/yazi-motoru.test.js` + `tests/yardimci/yazi-pdf.js` (paylaşılan başlık form nesnesi, logo, döndürülmüş yazı, Helvetica, imzalı sürüm).
 
+10. **OCR + taranmış belge + Word + sıkıştırma + karartma (Oturum 3)** — hepsi `src/core/`, Node'da test edilir, tarayıcıda aynı kodla çalışır. Yazı motoruna (`src/core/yazi/`) DOKUNULMADI.
+   - `ocr.js`: `ocrOrtamiAyarla({createWorker, secenekler})` (Node: `tools/ortam-node.mjs`, yerel `node_modules` dil verisi; tarayıcı: `src/ui/ortam.js → ocrHazirla()` mutlak URL'lerle `public/tesseract/`). `goruntuOcr`, `sayfaOcr` (sonuç **sayfa noktası**, görünür sol-alt orijin), `pdfOcr` (zaten yazısı olan sayfayı atlar; **görünmez yazı** katmanı = çizim kipi 3, `SayfaCizici.gorunmezMetin`, `%PDFARACLARI … tur=ocr` işaretli → `ocrKatmaniniKaldir`), `ocrKatmanindanCikar` (taranmış düzeltmede eski kelimeleri arama katmanından siler). Okunan yazı ASLA görünür yazı olarak otomatik eklenmez.
+   - `sayfa-resim.js`: sayfayı resme çevirip bölgeyi boyama (`sayfayiResmeCevir`), zemin/yazı rengi örnekleme, `sayfaYaziKutulari` (pdf.js yazı parçaları → görünür kutular; dönük yazı için de çalışır).
+   - `tarama-duzelt.js` (`bolgeDuzelt`): KULLANICININ seçtiği bölge zemin rengiyle örtülür + gerçek yazı yazılır. İki kip: **örtme** (yerinde; eski görüntü dosyada kalır → uyarı) ve **kalıcı** (düzeltilen sayfalar yeni belgeye yeniden resimlenerek yazılır; eski piksel gitmiş olur). Boyut otomatik: eski metnin genişliğine göre (`eskiMetin`), sığmazsa küçültür ve uyarır.
+   - `sayfa-icerik.js` + `pdf-word.js` (`pdfdenWord`): pdf.js `getTextContent` + operatör listesi (resim konumu, CTM takibi, `commonObjs` "g_" önekli resimler) → satır kurma → (iki sütun ayracı) → tablo (hizalı sütun kümeleme) → paragraf/başlık/madde/tire birleştirme → sayfalar arası paragraf birleştirme → docx (`Packer.toArrayBuffer`). `belgeAc(bayt,{ek:{fontExtraProperties:true}})` ile gerçek yazı tipi adı (kalın/italik/serif). Taranmış sayfa → `sayfaOcr` kelimeleri aynı hatta. Tekrarlayan üst/alt bilgi ve sayfa numarası atlanır. Her tahmin `uyarilar`'da bildirilir.
+   - `sikistir.js`: yalnızca fotoğraf türü resimler (DCT RGB/gri; Flate RGB/gri ve renk çeşitliliği ≥ %20) yeniden JPEG'e çevrilir/küçültülür (içerik akışındaki `cm/q/Q/Do`'dan gösterilen genişlik → etkin dpi); SMask/Mask/Decode/CMYK/1 bit/grafik resimlere dokunulmaz; kullanılmayan nesneler silinir, küçük resimler atılır; **sonuç büyükse özgün döner**. `render.js`'e ortam kancaları eklendi: `resimCoz`, `tuvaliBayta`, `tuvalOlustur`, `pdfjsOps`.
+   - `karart.js`: **gerçek karartma** = karartma içeren sayfalar resme çevrilir, bölgeler resimde boyanır, sayfa YENİ belgeye yazılır (eski içerik akışı/yazı tipi/resim/açıklama hiç taşınmaz); kalan yazı görünmez katman (kesişen/eşleşen parçalar hariç); belge bilgileri boşaltılır; çıktı yeniden okunup doğrulanır (kutu içi yazı, kalan eşleşme). `karartmaAra` (metin / `HAZIR_DESENLER` regex; i/İ/ı duyarsız; kutu tahmini orantılı + 1,5 harf pay; OCR ile arama seçeneği).
+   - Arayüz: `src/ui/bolge-secici.js` (fare/dokunma ile bölge çizme, OCR satırı önerileri), `src/ui/hizli-gecis.js` (araçlar arası bağlantı çipleri; yazı düzelt sayfasında "Yardımcı araçlar"), yeni sayfalar `ocr`, `taranmis-duzelt`, `pdf-word`, `sikistir`, `karart` (toplam 23 araç; gruplar "Dönüştür ve küçült", "Gizlilik ve şifre").
+   - Dosyalar sayfalar arasında taşınmaz (gizlilik: hiçbir şey saklanmaz); hızlı geçişte kullanıcı dosyayı yeniden seçer.
+
 **Geliştirme ortamı notları (Windows)**
 - Node.js 26 ve Git bu oturumda `winget` ile kuruldu (kullanıcı onayıyla). Claude'un PowerShell aracı bazen eski PATH ile açılır; komutların başına şunu koy:
   `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
@@ -81,6 +91,7 @@ Ayrıntılı lisans listesi: `THIRD_PARTY_LICENSES.md`.
 - `npm test` → 130 test (14 dosya): her araç için çalıştır → çiz → karşılaştır. Örn. birleştirmede sayfalar kaynak sayfalarla piksel piksel aynı, filigran geri alınca özgün sayfaya dönüyor, döndürülmüş sayfalarda konumlar doğru, yanlış/boş şifre reddediliyor, silinen sayfa içeriği dosyada kalmıyor.
 - `npm run ornek-test` → Masaüstündeki `ornekler` klasöründeki PDF'lerle (her dosyadan ilk 5 sayfa) tüm araçları dener, sayfaları çizip karşılaştırır, `ciktilar/ornek-test/rapor.md` üretir (git dışı). **Yazı düzeltme motoru için "bozmadan düzenledi mi?" denetimi bu betikteki `ayniMi` / `karsilastir` mantığıyla yapılacak** (`tools/karsilastir.mjs`: `sayfaPikselleri`, `karsilastir`, `metinCikar`, `doluluk`, `pngKaydet`).
 - Son sonuç (Oturum 2): `npm test` → **146/146** geçti (15 dosya; yazı motoru 15 test). `npm run ornek-test` → 9 PDF, **144 kontrol geçti, 0 kaldı**, 9 atlandı ("belgede form alanı yok"). Yazı motoru her belgede 3 kontrol yapar: analiz (çıkan metin pdf.js ile aynı); değişiklik yok → (a) 0 piksel, (b) ≤ 0,5 pt; bir satır düzeltme → yeni yazı yerinde, eski satır yok, (a) 0. Ayrıca `ciktilar/ornek-test/<dosya>/yazi-bindirme-sN.png` (bindirme), `yazi-yeniden.pdf`, `yazi-duzeltilmis.pdf` üretir; sayfa raporu `rapor.md`'de.
+- **Oturum 3 sonucu:** `npm test` → **191/191** geçti (20 dosya; yeni: `ocr`, `tarama-duzelt`, `pdf-word`, `sikistir`, `karart` testleri + 23 araçlık site yapısı). `npm run ornek-test` → 9 PDF, **180 kontrol geçti, 0 kaldı**, 9 atlandı (form yok). Yeni kontroller her belgede: sıkıştır (büyümez, yazı aynı, görüntü farkı ≤ 2,2/255; fotoğraflı belgelerde %21–33 küçüldü, yalnızca yazı/CCITT içerenlerde %0 — beklenen), PDF→Word (yazı kapsamı %91–100), karartma (aranan kelime çıktıda yok, eşleşmeyen sayfalar piksel piksel aynı), OCR (sayfa resme çevrilip okundu; sözcük kapsamı %92–100). Sentetik testlerde Türkçe OCR benzerliği %100, karartılan metin dosyanın hiçbir yerinde (ham bayt/akış/UTF-16/hex/belge bilgisi) yok.
 - Oturum 1: 130/130 test, 117 örnek kontrol.
 - Tarayıcıda (Chrome tabanlı panel) elle denendi ve çalıştı: birleştir (+şifreli dosya şifre akışı), böl, sil, çıkar, sırala, döndür, numara, üst/alt bilgi, filigran ekle, filigran geri al (bulunamadı yolu), resimden PDF, PDF'ten resim (+ZIP), şifre ekle/kaldır, kırp, imza/metin kutusu (sürükleme dahil), form doldur; mobil genişlikte (375px) yatay taşma yok. Konsolda hata yok.
 
@@ -92,7 +103,9 @@ Ayrıntılı lisans listesi: `THIRD_PARTY_LICENSES.md`.
 - Kırp aracı kenarları sürüklemeyi desteklemiyor (kaydırıcılar var). İmza çiziminde basınç/ince çizgi yok.
 - Resimden PDF: WebP/GIF/BMP tarayıcıda PNG'ye çevrilir (EXIF yönelimi uygulanır); JPEG EXIF yönelimi çekirdekte işlenir (aynalı yönelimler uyarı verir).
 - Büyük dosyalarda ana iş parçacığında çalışıyor (arayüz kısa süre donabilir); Web Worker'a taşımak iyileştirme olabilir.
-- Henüz yok: OCR, PDF→Word, **taranmış PDF'te yazı düzeltme** (sonraki oturum).
+- OCR / taranmış düzeltme / PDF→Word / sıkıştırma / karartma Oturum 3'te eklendi; ayrıntılı kullanıcıya dönük sınırlar `README.md` ve `README.en.md` → "Bilinen sınırlar" bölümünde (kaynak o; değişiklik olursa ikisini de güncelle). Önemlileri: OCR yalnızca Türkçe model; taranmış düzeltmede zemin rengi tahmini ve örtme kipinde eski görüntü dosyada kalır; Word çıktısı birebir olmaz (sütun/tablo/tire tahminleri); sıkıştırma yalnızca fotoğraf türü resimlerde, B/W (CCITT/JBIG2) taramalarda kazanç yok; karartma kutuları metin aramasında tahminidir, tireyle bölünmüş sözcük bulunamaz, yer imi/ek/form taşınmaz.
+- Tarayıcıda (gerçek tarayıcı panelinde) **elle denendi**: OCR, taranmış düzeltme (OCR satırı önerisi + uygula), PDF→Word, sıkıştırma, karartma (otomatik bul + elle çiz + uygula) ve yazı düzeltme bağlantıları; 375 px'te yatay taşma yok. Safari/Firefox/gerçek telefon HÂLÂ denenmedi. `vite build` başarılı (dist ≈ 35 MB; OCR dosyaları dist/tesseract altında).
+- OCR işçisi (worker) isteklerini panelin ağ kaydı göstermiyor; dışarı istek gittiğine dair belirti yok (üç yol da — workerPath, corePath, langPath — yerel verildi), ama canlı sitede ağ sekmesinden bir kez doğrulanmalı.
 - Yazı motoru sınırları: ölçü uyumlu karşılığı olmayan yazı tiplerinde satırlar orijinal kalır (%3 kuralı); Type3 / görünmez / kırpma yazısı, dikey (Identity-V) ve Identity-H dışındaki CID kodlamaları korunur; düzenlenen satır dar bir kırpma alanındaysa uzayan yazı kırpılabilir; yeni yazıda çift aralığı (kerning) uygulanmaz (kelime genişliği ölçekle oturtulur); etiketli PDF'te /ActualText varsa düzenlenen satırın erişilebilirlik metni eski kalabilir. Tarayıcıda yalnızca yapay belgeyle elle denendi (masaüstü + 375 px); büyük gerçek belgelerle tarayıcı denemesi yapılmadı. Tarayıcıdaki doğrulama ilk 30 sayfayla sınırlı.
 
 ## 7. AŞAMA LİSTESİ
@@ -134,19 +147,32 @@ Mantık: sayfa orijinal kalır; yalnızca yazı komutları yerinde değiştirili
 - Sonuç (ilk 5 sayfa, 9 örnek): **9/9 belgede (a) fark 0 piksel, (b) en büyük sapma 0,28 pt** (sınır 0,5 pt). Hiçbir belge kalmadı.
 - Dürüst sınırlar (raporda "kontrol gerekli" olarak görünür, satır orijinal kalır): ölçü uyumlu açık karşılığı olmayan yazı tipleri. Örn. "Roles for…" makalesinde gizli adlı AdvTT yazı tipleri → 264 satırın 196'sı orijinal kaldı; Demans kitabında Type3 (çizimle) Roboto yazıları korumalı, Merriweather/Myriad satırlarının 29'u sığmadı; nasr makalesinde Helvetica Neue Condensed tablo satırları (109) orijinal kaldı. Bu satırlar düzenlenirse seçilen yazı tipiyle yazılır (uyarı gösterilir).
 
-### Aşama 3 — Sonraki fikirler
-- [ ] OCR (tesseract.js, Türkçe dil verisi)
-- [ ] PDF → Word (docx)
-- [ ] Mobil/erişilebilirlik cilası, Web Worker, büyük dosya performansı
+### Aşama 3 — OCR, Word, sıkıştırma, karartma, GitHub hazırlığı (Oturum 3) — **TAMAM**
+- [x] OCR (tesseract.js, Türkçe): taranmış PDF → aranabilir (görünmez katman); test: okuma doğruluğu, görünüş aynı, geri alınır, konum
+- [x] Taranmış PDF'te yalnızca kullanıcının seçtiği bölgede düzeltme (örtme + yeni yazı); tüm sayfayı otomatik yeniden yazma YOK; sayfa sayfa OCR satırı seçerek kullanıcı onayıyla
+- [x] PDF → Word (.docx): paragraf, başlık (yazı boyutundan), resim, madde, basit tablo, iki sütun, tire birleştirme; taranmışta OCR; ekranda "birebir olmaz" uyarısı
+- [x] Sıkıştırma (kaliteyi koruyarak) + gerçek karartma (yazı hem görüntüden hem dosyadan silinir; dosyanın her yerinde aranarak test edildi)
+- [x] Yazı düzeltme sayfasına yardımcı araç bağlantıları
+- [x] GitHub hazırlığı: README (TR + EN), ekran görüntüsü yer tutucuları (`docs/ekran-goruntuleri/`), MIT, `THIRD_PARTY_LICENSES.md` güncel, Pages iş akışı, `docs/GITHUB_YAYIN.md`, "Bilinen sınırlar"
+
+### Aşama 4 — Sonraki fikirler
+- [ ] Mobil/erişilebilirlik cilası, Web Worker (OCR zaten kendi işçisinde; ağır sıkıştırma/Word ana iş parçacığında), büyük dosya performansı
 - [ ] Kırp aracında sürükleyerek ayarlama
+- [ ] OCR: sayfa eğimi/yönü düzeltme; ek diller (İngilizce) isteğe bağlı
+- [ ] Karartmada kelime kutularını kesinleştirme (yazı motorundaki glif konumlarından) ve tireyle bölünmüş sözcük araması
+- [ ] Sıkıştırmada JBIG2/CCITT siyah-beyaz taramalar için çözüm
+- [ ] Gerçek cihaz + Safari/Firefox denemeleri
 
 ## 8. Oturum günlüğü
 
+- **Oturum 3 (2026-11-23):** OCR (Türkçe), taranmış belgede bölge düzeltme, PDF→Word, sıkıştırma, gerçek karartma + arayüz sayfaları (5 yeni araç → 23) + yardımcı araç bağlantıları + GitHub hazırlığı (README TR/EN, lisanslar, yer tutucu görseller, yayın rehberi). Yazı motoruna dokunulmadı (yalnızca kullanıldı); `cizim.js`'e `gorunmezMetin`, `render.js`'e ortam kancaları eklendi. `@tesseract.js-data/tur` devDependency. Test sonuçları §5. Kullanıcıya GitHub yükleme adımları anlatıldı; **depo henüz GitHub'a yüklenmedi** (kullanıcı yükleyecek). Geçici betikler (`tools/_*.mjs`) silindi.
 - **Oturum 2 (2026-11-23):** Yazı düzeltme motoru (Aşama 2, adım 1–6) + `yazi-duzelt` sayfası (18. araç). `@pdf-lib/standard-fonts` doğrudan bağımlılık yapıldı (MIT; zaten pdf-lib ile geliyordu). `src/ui/arac.js` sonucu `ekler` (ek bölümler) alabiliyor. 146 test, 144 örnek kontrol geçti. `.claude/launch.json` (yerel önizleme ayarı, git dışı) yeniden yazıldı: `gelistirme` = `npm run dev`, port 5173.
 - **Oturum 1 (2026-11-23):** Proje sıfırdan kuruldu. Node.js + Git kuruldu (winget, kullanıcı onayıyla). Çekirdek + 17 araç sayfası + ana sayfa + hakkında sayfası yazıldı. 130 otomatik test ve 117 gerçek-PDF kontrolü geçti. Tarayıcıda elle denendi. README, MIT, üçüncü taraf lisanslar, Pages iş akışı hazır. GitHub'a **henüz yüklenmedi** (kullanıcı yükleyecek). Commit'ler yerel depoda.
 
 ## 9. Açık konular / kararlar
 
-- Depo GitHub'a yüklenip Pages ayarı yapılınca iş akışının ilk çalışması izlenmeli (Actions sekmesi). Orada `npm ci` / test / build adımlarında bir sorun çıkarsa düzeltilecek.
-- Kullanıcı GitHub kullanıcı adını/depo adını seçince README'deki `KULLANICI_ADINIZ` yer tutucuları ve (isteğe bağlı) altbilgideki depo bağlantısı güncellenecek.
+- Depo GitHub'a yüklenip Pages ayarı yapılınca iş akışının ilk çalışması izlenmeli (Actions sekmesi). Orada `npm ci` / test (OCR testleri Linux'ta ilk kez çalışacak) / build adımlarında bir sorun çıkarsa düzeltilecek. İş akışına `configure-pages` eklendi (Pages kaynağı "GitHub Actions" seçili değilse bu adımda anlaşılır hata verir).
+- Kullanıcı GitHub kullanıcı adını/depo adını seçince `README.md` (`KULLANICI_ADINIZ`), `README.en.md` (`YOUR_USERNAME`) ve `docs/GITHUB_YAYIN.md` yer tutucuları ve (isteğe bağlı) altbilgideki depo bağlantısı güncellenecek.
+- README'deki ekran görüntüleri yer tutucudur (`docs/ekran-goruntuleri/*.png`); kullanıcı gerçekleriyle aynı adla değiştirecek. Kişisel belge içeren görüntü ASLA konmaz.
+- `public/tesseract/` git'e girmez (derlemede üretilir); Türkçe dil verisi `npm ci` ile `@tesseract.js-data/tur` devDependency'sinden gelir — CI'da `npm ci` bunu da kurar.
 - Proje klasörü: Masaüstündeki `pdf-araclari` klasörü.

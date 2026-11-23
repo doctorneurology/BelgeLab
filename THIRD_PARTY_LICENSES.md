@@ -12,8 +12,14 @@ Bu projenin kendi kodu **MIT** lisanslıdır (bkz. `LICENSE`). Aşağıdaki bile
 | [@pdf-lib/fontkit](https://github.com/Hopding/fontkit) | 1.1.x | MIT | Yazı tiplerini PDF'e gömme |
 | [@pdf-lib/standard-fonts](https://github.com/Hopding/standard-fonts) | 1.0.x | MIT | Standart 14 PDF yazı tipinin genişlik tabloları (yazı düzeltme motoru) |
 | [qpdf](https://github.com/qpdf/qpdf) 12.2 (WebAssembly; `@neslinesli93/qpdf-wasm` ile) | 12.2.0 / 0.3.x | Apache-2.0 (qpdf), ISC (WASM paketleyici) | Şifre ekleme / şifre kaldırma |
-| [tesseract.js](https://github.com/naptha/tesseract.js) | 7.x | Apache-2.0 | OCR (sonraki aşamalarda kullanılacak; henüz arayüzde yok) |
-| [docx](https://github.com/dolanmiu/docx) | 9.x | MIT | Word çıktısı (sonraki aşamalarda kullanılacak; henüz arayüzde yok) |
+| [tesseract.js](https://github.com/naptha/tesseract.js) | 7.x | Apache-2.0 | OCR: taranmış sayfadaki yazıyı okuma (Türkçe) |
+| [tesseract.js-core](https://github.com/naptha/tesseract.js-core) (Tesseract OCR motorunun WebAssembly derlemesi) | 7.x | Apache-2.0 | OCR motoru (çevrimdışı çalışır) |
+| Türkçe OCR dil verisi: Tesseract `tessdata_best` / `tur` (npm: [@tesseract.js-data/tur](https://github.com/naptha/tessdata), `4.0.0_best_int`) | 1.0.0 | Apache-2.0 (veri; paketleyici MIT) | OCR Türkçe model dosyası (~2 MB, siteyle birlikte sunulur; internetten indirilmez) |
+| [docx](https://github.com/dolanmiu/docx) | 9.x | MIT | PDF → Word (.docx) çıktısı |
+
+Yukarıdaki bileşenlerin kendi bağımlılıkları da siteye girer; hepsi **MIT, ISC, BSD, 0BSD, Zlib veya Apache-2.0** lisanslıdır (ör. pako (MIT AND Zlib), idb-keyval ve wasm-feature-detect (Apache-2.0), bmp-js, is-url, zlibjs, regenerator-runtime (MIT)). Üretim bağımlılıkları arasında GPL/AGPL/LGPL **yoktur** (son kontrol: 2026-11-23, `npm ls --omit=dev --all`).
+
+OCR dosyaları (`worker.min.js`, çekirdek, dil verisi) derleme sırasında `public/tesseract/` altına kopyalanır; lisans metinleri aynı klasörde (`LICENSE-*.txt`) bulunur. Tesseract dil verisinin kaynağı: https://github.com/tesseract-ocr/tessdata_best (Apache-2.0).
 
 pdf.js'in yazı tipi/karakter haritası/WASM yardımcı dosyaları (`standard_fonts`, `cmaps`, `wasm`, `iccs`) derleme sırasında
 `public/pdfjs/` altına kopyalanır; lisans metinleri (`LICENSE-pdfjs.txt` ve `wasm/LICENSE_*`) yanlarındadır.
