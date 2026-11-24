@@ -83,6 +83,6 @@ describe('Üst / alt bilgi ekle', () => {
     const s = await bilgiEkle(pdf, { alanlar: { 'alt-orta': 'x' } });
     const { PDFDocument } = await import('pdf-lib');
     const d = await PDFDocument.load(s.bayt, { updateMetadata: false });
-    expect(d.getProducer()).toMatch(/PDF Araçları/);
+    expect(d.getProducer()).toMatch(/BelgeLab/);
   });
 });

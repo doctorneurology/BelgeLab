@@ -60,5 +60,5 @@ export const ARACLAR = [
 
 export const grupBolumu = (g) => g.bolum ?? 'pdf';
 
-export const SITE_ADI = 'PDF Araçları';
+export const SITE_ADI = 'BelgeLab';
 export const SLOGAN = 'Dosyalarınız cihazınızdan çıkmaz. Her şey tarayıcınızda çalışır.';

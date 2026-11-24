@@ -11,7 +11,7 @@ import {
   kararlar, aynenCizimleri, duzenlemeCizimleri, degisiklikleriUygula, kullanilmayanlariSil, imzalariKaldir,
 } from './yeniden.js';
 
-const ISARET = '% PDF Araclari: bu sayfanin yazilari yazi duzeltme motoruyla yeniden yazildi';
+const ISARET = '% BelgeLab: bu sayfanin yazilari yazi duzeltme motoruyla yeniden yazildi';
 
 function dizinler(doc, sayfalar) {
   if (!sayfalar) return null;

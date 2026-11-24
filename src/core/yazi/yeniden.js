@@ -333,6 +333,19 @@ async function uygula(analiz, yerine, { isaret = null } = {}) {
       if (!y) continue;
       if (!dugumDegisim.has(p.dugum)) dugumDegisim.set(p.dugum, { komut: new Map(), cizimler: [] });
       dugumDegisim.get(p.dugum).komut.set(p.opIdx, { p, cizimler: y.cizimler });
+      // Yeni yazı, parçanın dar kırpma hücresine (tek satırlık W n kutusu) sığmıyorsa o kırpma kaldırılır; yoksa taşan yazı
+      // görünmez kalır. Yalnızca yazısı gerçekten sığmayan parçalar etkilenir; dokunulmayan satırlar bayt bayt aynı kalır.
+      for (const c of y.cizimler) {
+        if (!c.metin || !c.pdfFont) continue;
+        const gen = (c.pdfFont.widthOfTextAtSize(c.metin, c.boyut) * (c.tz ?? 1));
+        for (const k of p.kirplar ?? []) {
+          const dar = k.kutu.y1 - k.kutu.y0 <= 3 * Math.max(p.boyut, 1);
+          if (dar && (c.x + gen > k.kutu.x1 + 0.5 || c.x < k.kutu.x0 - 0.5)) {
+            if (!dugumDegisim.has(k.dugum)) dugumDegisim.set(k.dugum, { komut: new Map(), cizimler: [] });
+            dugumDegisim.get(k.dugum).komut.set(k.i, { kirpmaKaldir: true });
+          }
+        }
+      }
     }
     if (!dugumDegisim.size) continue;
     // Değişen düğümlerin üstlerini de değişmiş say (Do adı değişecek)
@@ -380,8 +393,9 @@ async function uygula(analiz, yerine, { isaret = null } = {}) {
       const indeksler = [...new Set([...komut.keys(), ...cocuklar.keys()])].sort((a, b) => a - b);
       for (const k of indeksler) {
         if (komut.has(k)) {
-          const { p, cizimler } = komut.get(k);
-          ekle(k, komutYerine(p, cizimler, fontAdi, V2U));
+          const e = komut.get(k);
+          if (e.kirpmaKaldir) { ekle(k, ''); continue; } // "W" işleci kalkar, ardından gelen "n" yolu kırpmadan bitirir
+          ekle(k, komutYerine(e.p, e.cizimler, fontAdi, V2U));
         } else {
           const c = cocuklar.get(k);
           xoSoz.set(ad(c.ad), c.ref);

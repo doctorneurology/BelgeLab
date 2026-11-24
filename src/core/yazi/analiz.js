@@ -133,8 +133,22 @@ class Yorumlayici {
     const ops = dugum.ops;
     const kayit = [];
     let T = null; // {Tlm, dx}
+    let yol = []; // kırpma yolu (W) için biriken yol noktaları (görünür koordinat)
     for (let i = 0; i < ops.length; i++) {
       const { op, args } = ops[i];
+      // Kırpma kutuları: bazı belgelerde her yazı parçası kendi dar hücresine kırpılır (W n). Düzeltilen satır o hücreye
+      // sığmazsa görünmez kalırdı; bu yüzden etkin kırpma kutuları parçaya kaydedilir (bkz. yeniden.js → kirpmaKaldir).
+      if (op === 'm' || op === 'l') { if (args.length >= 2) yol.push(uygula(gs.ctm, sayiAl(args[0]), sayiAl(args[1]))); }
+      else if (op === 're' && args.length >= 4) {
+        const [x, y, w, h] = args.map((a) => sayiAl(a));
+        for (const [dx, dy] of [[0, 0], [w, 0], [0, h], [w, h]]) yol.push(uygula(gs.ctm, x + dx, y + dy));
+      } else if (op === 'c' && args.length >= 6) { for (let k = 0; k < 6; k += 2) yol.push(uygula(gs.ctm, sayiAl(args[k]), sayiAl(args[k + 1]))); }
+      else if (op === 'W' || op === 'W*') {
+        if (yol.length) {
+          const xs = yol.map((q) => q[0]), ys = yol.map((q) => q[1]);
+          gs.kirplar = [...(gs.kirplar ?? []), { dugum, i, kutu: { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) } }];
+        }
+      } else if (['n', 'f', 'F', 'f*', 'B', 'B*', 'b', 'b*', 'S', 's'].includes(op)) yol = [];
       switch (op) {
         case 'q': kayit.push(gsKopya(gs)); break;
         case 'Q': if (kayit.length) gs = kayit.pop(); break;
@@ -243,7 +257,7 @@ class Yorumlayici {
       glifler, yatay, aci: (Math.atan2(L[1], L[0]) * 180) / Math.PI, boyut,
       hOlcek: yatay ? (L[0] * Tfs * Th) / boyut : 1, cVis: yatay ? Tc * Th * L[0] : 0,
       y: yatay ? yTaban + L[3] * Ts : 0, yukselme: yatay ? L[3] * Ts : 0,
-      renk: gs.renk, gsFont: !!gs.gsFont,
+      renk: gs.renk, gsFont: !!gs.gsFont, kirplar: gs.kirplar ?? [],
     });
   }
 }

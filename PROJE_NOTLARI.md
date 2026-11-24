@@ -1,4 +1,4 @@
-# PROJE NOTLARI — PDF Araçları
+# PROJE NOTLARI — BelgeLab (eski adı: PDF Araçları)
 
 > **Her oturumun başında bu dosya okunur. Her aşama bitince güncellenir.**
 > Son güncelleme: 2026-11-23 (Oturum 3 sonu — OCR, taranmış belgede düzeltme, PDF→Word, sıkıştırma, gerçek karartma, GitHub hazırlığı)
@@ -189,3 +189,8 @@ Mantık: sayfa orijinal kalır; yalnızca yazı komutları yerinde değiştirili
 - README'deki ekran görüntüleri yer tutucudur (`docs/ekran-goruntuleri/*.png`); kullanıcı gerçekleriyle aynı adla değiştirecek. Kişisel belge içeren görüntü ASLA konmaz.
 - `public/tesseract/` git'e girmez (derlemede üretilir); Türkçe dil verisi `npm ci` ile `@tesseract.js-data/tur` devDependency'sinden gelir — CI'da `npm ci` bunu da kurar.
 - Proje klasörü: Masaüstündeki `pdf-araclari` klasörü.
+
+## Oturum 5 — BelgeLab adı, geri düğmesi, kırpma hatası
+- Site adı **BelgeLab** oldu (eski: PDF Araçları). Depo/paket adı `pdf-araclari` kasıtlı olarak değişmedi (GitHub adresi bozulmasın). Her araç sayfasında üstte "← Ana sayfaya dön" düğmesi var (`src/ui/kabuk.js`).
+- **Yazı düzelt motoru düzeltmesi (kullanıcı izniyle):** bazı PDF'lerde her hücre kendi kırpma alanı (`W n`) içinde yazılıyor; düzenlenmiş satır birleşip ilk hücreye yazılınca kırpılıp görünmez oluyordu (örn. "Konu" satırı). `analiz.js` artık kırpma alanlarını kaydeder, `yeniden.js` yeni metin taşıyorsa o kırpmayı kaldırır. Test: `tests/yazi-kirpma.test.js`.
+- Bilinen kozmetik: birleştirilen satırda etiket/iki nokta/değer arasındaki boşluk kaybolabilir ("Konu :Dr."); düzenleme alanına boşluk eklenerek giderilir.

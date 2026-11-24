@@ -3,7 +3,7 @@ import {
 } from 'pdf-lib';
 import { PdfHatasi, SifreliPdfHatasi } from './hatalar.js';
 
-export const URETICI = 'PDF Araçları (açık kaynak, tarayıcıda çalışır)';
+export const URETICI = 'BelgeLab (açık kaynak, tarayıcıda çalışır)';
 
 /** PDF baytlarını açar. Şifreliyse SifreliPdfHatasi, bozuksa PdfHatasi fırlatır. */
 export async function pdfAc(bayt) {

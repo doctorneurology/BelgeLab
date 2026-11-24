@@ -30,7 +30,7 @@ export function srgbIccProfili() {
     return a;
   };
   const etiketler = [
-    ['desc', aciklama('sRGB-uyumlu profil (PDF Araçları)')], ['cprt', metin('Kamu malı (public domain)')],
+    ['desc', aciklama('sRGB-uyumlu profil (BelgeLab)')], ['cprt', metin('Kamu malı (public domain)')],
     ['wtpt', xyz(0.9642, 1.0, 0.8249)],
     ['rXYZ', xyz(0.4360747, 0.2225045, 0.0139322)], ['gXYZ', xyz(0.3850649, 0.7168786, 0.0971045)], ['bXYZ', xyz(0.1430804, 0.0606169, 0.7141733)],
     ['rTRC', egri], ['gTRC', egri], ['bTRC', egri],

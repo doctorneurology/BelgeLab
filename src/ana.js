@@ -3,7 +3,7 @@ import { kabukKur } from './ui/kabuk.js';
 import { h } from './ui/yardim.js';
 import { BOLUMLER, SITE_ADI } from './araclar.js';
 
-const main = kabukKur({});
+const main = kabukKur({ anaSayfa: true });
 document.title = SITE_ADI;
 main.classList.add('ana-sayfa');
 main.append(

@@ -2,7 +2,7 @@
 import { h, $ } from './yardim.js';
 import { ARACLAR, GRUPLAR, SITE_ADI, SLOGAN } from '../araclar.js';
 
-export function kabukKur({ slug = '', baslik = '', kisa = '' } = {}) {
+export function kabukKur({ slug = '', baslik = '', kisa = '', anaSayfa = false } = {}) {
   const kok = $('#uygulama');
   kok.replaceChildren();
 
@@ -23,8 +23,10 @@ export function kabukKur({ slug = '', baslik = '', kisa = '' } = {}) {
 
   const ust = h('header', { class: 'ustcubuk' },
     h('div', { class: 'ustcubuk-ic' },
-      h('a', { class: 'logo', href: 'index.html' }, h('span', { class: 'logo-isaret', 'aria-hidden': 'true' }, 'PDF'), SITE_ADI),
-      menuDugme),
+      h('a', { class: 'logo', href: 'index.html' }, h('span', { class: 'logo-isaret', 'aria-hidden': 'true' }, 'BL'), SITE_ADI),
+      h('div', { class: 'ust-sag' },
+        anaSayfa ? null : h('a', { class: 'ana-don', href: 'index.html' }, '← Ana sayfaya dön'),
+        menuDugme)),
     panel);
 
   const main = h('main', { id: 'icerik', tabindex: '-1' });

@@ -442,7 +442,7 @@ export async function pdfdenWord(bayt, secenek = {}) {
     const ust = kenarPt(ilk.yukseklik - YUZDELIK(tumSatirlar.map((l) => l.y), 0.98));
     const alt = kenarPt(YUZDELIK(tumSatirlar.map((l) => l.y), 0.02));
     const dokuman = new Document({
-      creator: 'PDF Araçları (açık kaynak)',
+      creator: 'BelgeLab (açık kaynak)',
       title: String(dosyaAdi).replace(/\.pdf$/i, ''),
       description: 'PDF dosyasından otomatik dönüştürüldü; düzen aslından farklı olabilir.',
       styles: { default: { document: { run: { font: 'Arial', size: sizePt(govdeBoyut), language: { value: 'tr-TR' } } } } },

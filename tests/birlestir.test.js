@@ -47,7 +47,7 @@ describe('PDF birleştir', () => {
     const sonuc = await birlestir([{ ad: 'a.pdf', bayt: a }, { ad: 'b.pdf', bayt: a }]);
     const { PDFDocument } = await import('pdf-lib');
     const d = await PDFDocument.load(sonuc.bayt, { updateMetadata: false });
-    expect(d.getProducer()).toMatch(/PDF Araçları/);
+    expect(d.getProducer()).toMatch(/BelgeLab/);
     expect(d.getModificationDate()).toBeInstanceOf(Date);
   });
 });

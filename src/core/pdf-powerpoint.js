@@ -44,7 +44,7 @@ export async function pdfdenPowerPoint(bayt, { sayfalar = '', mod = 'duzenlenebi
       }
     }
     const pptx = new PptxGenJS();
-    pptx.author = 'PDF Araçları (açık kaynak)';
+    pptx.author = 'BelgeLab (açık kaynak)';
     pptx.title = 'PDF’ten dönüştürüldü';
     const ilk = await belge.getPage(secili[0] + 1);
     const vp0 = ilk.getViewport({ scale: 1 });
