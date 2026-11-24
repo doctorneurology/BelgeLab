@@ -12,10 +12,14 @@ Tarayıcıda çalışan, **sunucusuz**, açık kaynaklı (MIT) bir **PDF ve Exce
 | Grup | Araçlar |
 |---|---|
 | Sayfaları düzenle | PDF birleştir · PDF böl · Sayfa sil · Sayfa sırala · Sayfa döndür · Sayfa çıkar · Kırp · **Yazı düzelt** (metin tabanlı PDF; sayfa düzeni aynen kalır) · **Taranmış belgede yazı düzelt** (yalnızca seçtiğiniz bölge) |
-| Belgeye ekle | Sayfa numarası · Üst/alt bilgi · Filigran ekle (ve **kendi eklediğini** geri al) · Görünür imza / metin kutusu · Form doldur |
-| Dönüştür ve küçült | **OCR** (taranmış PDF'i Türkçe okuyup aranabilir yapma) · **PDF → Word (.docx)** · **PDF sıkıştır** (kaliteyi koruyarak) · Resimden PDF · PDF'ten resim (PNG/JPEG, ZIP) |
+| İyileştir | **OCR** (taranmış PDF'i Türkçe okuyup aranabilir yapma) · **PDF sıkıştır** (kaliteyi koruyarak) · **PDF onar** (bozuk/yarım PDF'i kurtarmayı dener) |
+| PDF'e dönüştür | **Word → PDF** · **PowerPoint → PDF** · **Excel → PDF** · **HTML → PDF** · Resimden PDF · **PDF'e tara** (kamera/galeri fotoğraflarını temiz taramaya çevirir) |
+| PDF'ten dönüştür | PDF → Word · **PDF → Markdown** (sayfa/dosya sınırı yok) · **PDF → Excel** · **PDF → PowerPoint** · PDF → resim (PNG/JPEG, ZIP) · **PDF'teki resimleri ayıkla** · **PDF → PDF/A (deneysel)** |
+| Belgeye ekle | Sayfa numarası · Üst/alt bilgi · Filigran ekle (ve **kendi eklediğini** geri al) · Görünür imza / metin kutusu · **Şekil ve vurgu ekle** · Form doldur · **Doldurulabilir form oluştur** |
 | Excel | **Excel birleştir** (sıra korunur, atlanacak üst satırlar ayarlanır) · **Hasta başvuru analizi** (TC / ad soyad / başvuru no sütunlarını otomatik bulur, kişileri sayar, dosyalar arası çapraz varlığı gösterir, Excel'e aktarır) |
-| Gizlilik ve şifre | **Karart (gerçek silme)** — yazı hem görüntüden hem dosyadan silinir · Şifre ekle (AES-256) · Şifre kaldır (**yalnızca şifre biliniyorsa**) |
+| Güvenlik ve karşılaştırma | **Karart (gerçek silme)** — yazı hem görüntüden hem dosyadan silinir · Şifre ekle (AES-256) · Şifre kaldır (**yalnızca şifre biliniyorsa**) · **PDF karşılaştır** (iki sürümün yazı ve görüntü farkı) |
+
+**Sayfa ve dosya sınırı yoktur:** tüm araçlar istediğiniz kadar sayfayı işler (örneğin 3000 paragraflık HTML, 5000 satırlık Excel, 300 slaytlık sunum testlerle denendi); yalnızca cihazınızın belleği sınırdır.
 
 Türkçe karakterler (ğ ş ı İ ö ü ç) tüm araçlarda sorunsuz çalışır: açık lisanslı, ölçü uyumlu yazı tipleri
 (Liberation, Carlito, Caladea, Noto) ve Türkçe OCR dil verisi projeye dahildir.
@@ -50,6 +54,24 @@ Hiçbir PDF aracı her belgede kusursuz çalışmaz. Bu sitenin bildiği sınır
 - Otomatik testler Node.js'te, elle deneme ise yalnızca Chromium tabanlı bir tarayıcıda (masaüstü + 375 px telefon genişliği) yapıldı. Safari, Firefox ve gerçek telefonlarda denenmedi.
 - Dijital imzalı belgede yapılan her değişiklik imzayı geçersiz kılar; çıktı imzasız yeni bir dosyadır (uyarı gösterilir).
 - Sayfa silme/çıkarma/bölme gibi işlemler sayfaları yeni belgeye kopyalar; form alanları, yer imleri ve ekler taşınmayabilir (uyarı gösterilir).
+
+**PDF → Markdown / Excel / PowerPoint**
+- Yapı (başlık, paragraf, tablo, sütun) PDF'ten **tahmin edilir**; iki sütunlu sayfalar sol → sağ sıralanır, birleştirilmiş hücreli/iç içe tablolar, formüller ve metin kutuları bozulabilir. Markdown'da bağlantılar (http/https/mailto) korunur, sayfa içi bağlantılar korunmaz.
+- PDF → Excel yalnızca yazıların hizasından tablo bulur (çizgiler okunmaz); tablo yoksa uyarır. PDF → PowerPoint'te yazı tipleri benzerleriyle değişir (Arial, Times New Roman, Calibri…), taranmış sayfalar yalnızca resim olur.
+
+**Word / PowerPoint / Excel / HTML → PDF**
+- Bunlar Word, PowerPoint ya da tarayıcı **değildir**: görünüm/sayfa sonları birebir aynı olmaz. Word: üst/alt bilgi, dipnot, metin kutusu, şekil, denklem ve sütunlu bölümler yok; PowerPoint: animasyon, SmartArt, grafik, gradyan, döndürülmüş nesne yok, şekiller dikdörtgen çizilir; Excel: renk/kenarlık/grafik yok, yalnızca değerler tablo olarak yazılır; HTML: CSS, JavaScript, harici resim/stil ve adresten (URL) çevirme yok. Eski .doc / .ppt desteklenmez. Sonuçta desteklenmeyen öğeler ayrıca bildirilir.
+
+**PDF onar**
+- Çapraz başvuru tablosu/başlık hasarı ve sonu kesilmiş dosyalar kurtarılır; dosyanın büyük kısmı eksikse (sayfa verileri, yazı tipleri yok) kurtarma yapılamaz ve bu açıkça söylenir. Sonuç çizilerek denetlenir.
+
+**PDF'e tara / PDF karşılaştır / şekil ve form araçları**
+- Tarama: belge kenarını otomatik bulma ve perspektif düzeltme yoktur; siyah-beyaz kip fotoğrafı bozar. Karşılaştırma: metin farkı seçilebilir yazıya, görsel fark piksellere dayanır; çok uzun sayfalarda sözcük karşılaştırması ilk 3000 sözcükle sınırlıdır. Şekiller dönük sayfalarda doğru yere gelir; serbest çizim için imza tahtası kullanılır. Form oluştururken JavaScript'li doğrulama/biçimlendirme ve dijital imza alanı yoktur.
+
+**PDF → PDF/A (DENEYSEL)**
+- Çıktı PDF/A-2b'ye yaklaşır ama resmî bir doğrulayıcıyla (veraPDF) **sınanmamıştır**; uyumlu olduğu garanti edilmez. Sayfalar resme çevrilir (dosya büyür, yazı tipleri/vektörler kalmaz; yazı aranabilir katman olarak korunur).
+
+**iLovePDF'te olup burada OLMAYANLAR:** yapay zekâ ile özet ve çeviri (internete/yapay zekâ hizmetine gönderme gerektirir; bu sitenin "dosya cihazdan çıkmaz" ilkesine aykırıdır), başkalarından e-imza isteme, iş akışları, masaüstü/mobil uygulama ve hesap/abonelik özellikleri.
 
 **Excel**
 - Her dosyanın yalnızca **ilk sayfası** okunur. Analizde başlık satırı ilk 15 satır içinde "TC" ya da "ad soyad" başlığından bulunur; başlıklar tanınmazsa dosya için uyarı verilir.

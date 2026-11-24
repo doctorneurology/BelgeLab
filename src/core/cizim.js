@@ -156,6 +156,42 @@ export class SayfaCizici {
       `${font.encodeText(`${metin} `).toString()} Tj`, 'ET'].join('\n'));
   }
 
+  /**
+   * Şekil: 'elips' | 'cizgi' | 'ok' | 'serbest' (noktalar: [[x,y]…]). Koordinatlar görünür sayfa noktası.
+   * renk: çizgi rengi, dolgu: iç rengi (yalnızca elips), kalinlik: pt, opaklik: 0-1
+   */
+  sekil({ tur, x0 = 0, y0 = 0, x1 = 0, y1 = 0, renk = '#000000', dolgu = null, kalinlik = 2, opaklik = 1, noktalar = [] }) {
+    const gs = this._opaklikAdi(opaklik);
+    const op = ['q'];
+    if (gs) op.push('/' + gs + ' gs');
+    const c = renkCoz(renk);
+    op.push(sayi(c.r) + ' ' + sayi(c.g) + ' ' + sayi(c.b) + ' RG', sayi(kalinlik) + ' w', '1 J', '1 j');
+    const d = dolgu ? renkCoz(dolgu) : null;
+    if (d) op.push(sayi(d.r) + ' ' + sayi(d.g) + ' ' + sayi(d.b) + ' rg');
+    if (tur === 'elips') {
+      const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2, k = 0.5522847498;
+      op.push(sayi(cx + rx) + ' ' + sayi(cy) + ' m',
+        sayi(cx + rx) + ' ' + sayi(cy + k * ry) + ' ' + sayi(cx + k * rx) + ' ' + sayi(cy + ry) + ' ' + sayi(cx) + ' ' + sayi(cy + ry) + ' c',
+        sayi(cx - k * rx) + ' ' + sayi(cy + ry) + ' ' + sayi(cx - rx) + ' ' + sayi(cy + k * ry) + ' ' + sayi(cx - rx) + ' ' + sayi(cy) + ' c',
+        sayi(cx - rx) + ' ' + sayi(cy - k * ry) + ' ' + sayi(cx - k * rx) + ' ' + sayi(cy - ry) + ' ' + sayi(cx) + ' ' + sayi(cy - ry) + ' c',
+        sayi(cx + k * rx) + ' ' + sayi(cy - ry) + ' ' + sayi(cx + rx) + ' ' + sayi(cy - k * ry) + ' ' + sayi(cx + rx) + ' ' + sayi(cy) + ' c', d ? 'B' : 'S');
+    } else if (tur === 'cizgi' || tur === 'ok') {
+      op.push(sayi(x0) + ' ' + sayi(y0) + ' m', sayi(x1) + ' ' + sayi(y1) + ' l', 'S');
+      if (tur === 'ok') {
+        const a = Math.atan2(y1 - y0, x1 - x0), boy = Math.max(8, kalinlik * 4);
+        for (const s of [-1, 1]) {
+          const t = a + Math.PI + s * Math.PI / 7;
+          op.push(sayi(x1) + ' ' + sayi(y1) + ' m', sayi(x1 + boy * Math.cos(t)) + ' ' + sayi(y1 + boy * Math.sin(t)) + ' l', 'S');
+        }
+      }
+    } else if (tur === 'serbest') {
+      noktalar.forEach(([x, y], i) => op.push(sayi(x) + ' ' + sayi(y) + (i ? ' l' : ' m')));
+      op.push('S');
+    }
+    op.push('Q');
+    this.ops.push(op.join('\n'));
+  }
+
   /** Sol-alt köşesi (x, y), boyutu (w, h) olan resim. aci: sol-alt köşe etrafında döndürme. */
   resim({ resim, x, y, w, h, aci = 0, opaklik = 1 }) {
     const ad = this._resimAdi(resim);

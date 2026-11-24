@@ -16,6 +16,8 @@ Bu projenin kendi kodu **MIT** lisanslıdır (bkz. `LICENSE`). Aşağıdaki bile
 | [tesseract.js-core](https://github.com/naptha/tesseract.js-core) (Tesseract OCR motorunun WebAssembly derlemesi) | 7.x | Apache-2.0 | OCR motoru (çevrimdışı çalışır) |
 | Türkçe OCR dil verisi: Tesseract `tessdata_best` / `tur` (npm: [@tesseract.js-data/tur](https://github.com/naptha/tessdata), `4.0.0_best_int`) | 1.0.0 | Apache-2.0 (veri; paketleyici MIT) | OCR Türkçe model dosyası (~2 MB, siteyle birlikte sunulur; internetten indirilmez) |
 | [xlsx (SheetJS)](https://github.com/SheetJS/sheetjs) | 0.18.5 | Apache-2.0 | Excel okuma/yazma (Excel birleştir, hasta başvuru analizi) |
+| [pptxgenjs](https://github.com/gitbrent/PptxGenJS) | 4.x | MIT | PDF → PowerPoint (.pptx) çıktısı (bağımlılığı JSZip: MIT veya GPL-3.0+ ikili lisanslı; **MIT** seçeneği kullanılır) |
+| [fflate](https://github.com/101arrowz/fflate) | 0.8.x | MIT | .docx / .pptx dosyalarını açma (Word → PDF, PowerPoint → PDF) |
 | [docx](https://github.com/dolanmiu/docx) | 9.x | MIT | PDF → Word (.docx) çıktısı |
 
 Yukarıdaki bileşenlerin kendi bağımlılıkları da siteye girer; hepsi **MIT, ISC, BSD, 0BSD, Zlib veya Apache-2.0** lisanslıdır (ör. pako (MIT AND Zlib), idb-keyval ve wasm-feature-detect (Apache-2.0), bmp-js, is-url, zlibjs, regenerator-runtime (MIT)). Üretim bağımlılıkları arasında GPL/AGPL/LGPL **yoktur** (son kontrol: 2026-11-23, `npm ls --omit=dev --all`).

@@ -50,6 +50,11 @@ async function calistir(args, girdi) {
   return { kod, kayit: [cikis.metin(), hata.metin(), ...ekstra].join('\n'), cikti };
 }
 
+/** Genel qpdf çağrısı (onarma vb.). Girdi /girdi.pdf, çıktı /cikti.pdf olarak okunur/yazılır. */
+export async function qpdfCalistir(args, girdi) {
+  return calistir(args, girdi);
+}
+
 /** PDF şifreli mi? (şifre gerekmeden anlaşılabilir) */
 export async function sifreliMi(bayt) {
   try {

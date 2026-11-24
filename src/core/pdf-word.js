@@ -43,8 +43,8 @@ export function satirlariKur(parcalar) {
         if (bosluk >= 1.5 * Math.max(p.boyut, onceki.boyut)) { segmentler.push(seg); seg = null; }
       }
       const son = runs[runs.length - 1];
-      const bicim = { kalin: p.kalin, italik: p.italik, sabit: p.sabit, serifli: p.serifli, boyut: Math.round(p.boyut * 2) / 2 };
-      if (son && son.kalin === bicim.kalin && son.italik === bicim.italik && son.sabit === bicim.sabit && son.boyut === bicim.boyut) son.metin += metin;
+      const bicim = { kalin: p.kalin, italik: p.italik, sabit: p.sabit, serifli: p.serifli, boyut: Math.round(p.boyut * 2) / 2, url: p.url };
+      if (son && son.kalin === bicim.kalin && son.italik === bicim.italik && son.sabit === bicim.sabit && son.boyut === bicim.boyut && son.url === bicim.url) son.metin += metin;
       else runs.push({ metin, ...bicim });
       if (!seg) seg = { x0: p.x0, x1: p.x1, metin: p.metin.trimStart() };
       else { seg.x1 = p.x1; seg.metin += metin; }
@@ -268,7 +268,7 @@ function ustAltAyikla(sayfalar) {
  * @param secenek.ustAltAtla true: tekrarlayan üst/alt bilgi ve sayfa numaralarını aktarma
  * @returns {{bayt:Uint8Array, uyarilar:string[], bilgi:{sayfa,paragraf,baslik,tablo,resim,ocrSayfa,sutunluSayfa}}}
  */
-export async function pdfdenWord(bayt, {
+export async function pdfYapisi(bayt, {
   sayfalar = '', ocr = 'otomatik', resimler = true, ustAltAtla = true, dil = 'tur', ocrDpi = 250, ilerleme, dosyaAdi = 'belge',
 } = {}) {
   const belge = await belgeAc(bayt, { ek: { fontExtraProperties: true } });
@@ -374,41 +374,28 @@ export async function pdfdenWord(bayt, {
       sonSayfaBlogu = b;
     }
 
+    return { nihai, bilgi, uyarilar, govdeBoyut, sayfaVerisi, dondurulmus, atlananResim };
+  } finally {
+    await belge.kapat();
+  }
+}
+
+/** PDF → Word (.docx). Ayrıntı için dosya başındaki dürüstlük notuna bakın. */
+export async function pdfdenWord(bayt, secenek = {}) {
+  const { dosyaAdi = 'belge' } = secenek;
+  const { nihai, bilgi, uyarilar, govdeBoyut, sayfaVerisi, dondurulmus, atlananResim } = await pdfYapisi(bayt, secenek);
+  {
     const docx = await import('docx');
-    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } = docx;
+    const { Document, Packer, Paragraph, TextRun, ExternalHyperlink, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } = docx;
     const yazi = (r) => (r.sabit ? 'Courier New' : r.serifli ? 'Times New Roman' : 'Arial');
     const sizePt = (b) => Math.max(8, Math.min(144, Math.round(b * 2)));
     const BASLIKLAR = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4];
 
-    /** Satırları tek metne birleştirir (tireli bölünmeyi birleştirir) ve biçimli parçalara (run) böler. */
-    const calismalar = (satirlar, { baslik = false, maddeAt = false } = {}) => {
-      const out = [];
-      const ekle = (metin, r) => {
-        if (!metin) return;
-        const son = out[out.length - 1];
-        if (son && son.kalin === r.kalin && son.italik === r.italik && son.sabit === r.sabit && son.boyut === r.boyut && son.serifli === r.serifli) son.metin += metin;
-        else out.push({ metin, kalin: r.kalin, italik: r.italik, sabit: r.sabit, boyut: r.boyut, serifli: r.serifli });
-      };
-      satirlar.forEach((l, i) => {
-        l.runs.forEach((r, j) => {
-          let metin = r.metin;
-          if (i === 0 && j === 0 && maddeAt) metin = metin.replace(MADDE, '');
-          if (i > 0 && j === 0) metin = metin.replace(/^\s+/, '');
-          ekle(metin, r);
-        });
-        if (i < satirlar.length - 1) {
-          const son = out[out.length - 1];
-          const siradaki = satirlar[i + 1].metin;
-          if (son && /\p{L}-$/u.test(son.metin.trimEnd()) && /^\p{Ll}/u.test(siradaki) && !baslik) {
-            son.metin = son.metin.trimEnd().slice(0, -1);
-            bilgi.tireBirlestirilen++;
-          } else if (son) son.metin = `${son.metin.replace(/\s+$/, '')} `;
-        }
-      });
-      if (out.length) out[out.length - 1].metin = out[out.length - 1].metin.replace(/\s+$/, '');
-      return out;
+    const calismalar = (satirlar, o = {}) => paragrafParcalari(satirlar, o, bilgi);
+    const run = (r, ek = {}) => {
+      const t = new TextRun({ text: r.metin, bold: r.kalin, italics: r.italik, size: sizePt(r.boyut), font: yazi(r), ...(r.url ? { style: 'Hyperlink' } : {}), ...ek });
+      return r.url ? new ExternalHyperlink({ children: [t], link: r.url }) : t;
     };
-    const run = (r, ek = {}) => new TextRun({ text: r.metin, bold: r.kalin, italics: r.italik, size: sizePt(r.boyut), font: yazi(r), ...ek });
 
     const govde = [];
     for (const b of nihai) {
@@ -477,7 +464,34 @@ export async function pdfdenWord(bayt, {
     if (atlananResim) uyarilar.push(`${atlananResim} resim aktarılamadı ya da atlandı (çok küçük, sayfa boyunda arka plan veya desteklenmeyen resim türü).`);
     uyarilar.push('Matematik formülleri, metin kutuları, dipnotların yerleşimi ve özel yazı tipleri Word’de farklı görünebilir; yazı tipleri Arial/Times New Roman/Courier olarak eşlendi.');
     return { bayt: cikti, uyarilar, bilgi };
-  } finally {
-    await belge.kapat();
-  }
+}
+}
+
+/** Satırları tek metne birleştirir (tireli bölünmeyi birleştirir) ve biçimli parçalara (run) böler. */
+export function paragrafParcalari(satirlar, { baslik = false, maddeAt = false } = {}, bilgi = {}) {
+  const out = [];
+  const ekle = (metin, r) => {
+    if (!metin) return;
+    const son = out[out.length - 1];
+    if (son && son.kalin === r.kalin && son.italik === r.italik && son.sabit === r.sabit && son.boyut === r.boyut && son.serifli === r.serifli && son.url === r.url) son.metin += metin;
+    else out.push({ metin, kalin: r.kalin, italik: r.italik, sabit: r.sabit, boyut: r.boyut, serifli: r.serifli, url: r.url });
+  };
+  satirlar.forEach((l, i) => {
+    l.runs.forEach((r, j) => {
+      let metin = r.metin;
+      if (i === 0 && j === 0 && maddeAt) metin = metin.replace(MADDE, '');
+      if (i > 0 && j === 0) metin = metin.replace(/^\s+/, '');
+      ekle(metin, r);
+    });
+    if (i < satirlar.length - 1) {
+      const son = out[out.length - 1];
+      const siradaki = satirlar[i + 1].metin;
+      if (son && /\p{L}-$/u.test(son.metin.trimEnd()) && /^\p{Ll}/u.test(siradaki) && !baslik) {
+        son.metin = son.metin.trimEnd().slice(0, -1);
+        bilgi.tireBirlestirilen++;
+      } else if (son) son.metin = `${son.metin.replace(/\s+$/, '')} `;
+    }
+  });
+  if (out.length) out[out.length - 1].metin = out[out.length - 1].metin.replace(/\s+$/, '');
+  return out;
 }

@@ -11,7 +11,7 @@ import { YAZI_AILELERI, yaziTipiOlcer } from '../core/fonts.js';
 import { dosyaAdiTuret, sayfaSecimi } from '../core/util.js';
 import { PdfHatasi } from '../core/hatalar.js';
 
-const COK_SAYFA = 40;
+const COK_SAYFA = 2000; // tek seferde incelenen en çok sayfa (daha uzun belgede aralık seçilir)
 const aileSecenekleri = (secili) => Object.entries(YAZI_AILELERI).map(([k, a]) => h('option', { value: k, selected: k === secili }, `${a.ad} — ${a.benzer}`));
 const pt = (x) => `${x.toFixed(1).replace('.', ',')} pt`;
 
@@ -303,7 +303,7 @@ function dogrulamaBolumu(orijinal, cikti, rapor) {
   dugme, sonuc);
   async function calistir() {
     dugme.disabled = true;
-    const sayfalar = rapor.map((s) => s.no).slice(0, 30);
+    const sayfalar = rapor.map((s) => s.no).slice(0, 2000);
     sonuc.replaceChildren(h('p', { class: 'soluk' }, `${sayfalar.length} sayfa karşılaştırılıyor…`));
     await boyamaBekle();
     try {

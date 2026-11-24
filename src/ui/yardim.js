@@ -34,7 +34,7 @@ export async function dosyaOku(dosya) {
   return new Uint8Array(await dosya.arrayBuffer());
 }
 
-const MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', zip: 'application/zip', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+const MIME = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', zip: 'application/zip', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', md: 'text/markdown;charset=utf-8', txt: 'text/plain;charset=utf-8' };
 export function mimeBul(ad) {
   const u = String(ad).split('.').pop().toLowerCase();
   return MIME[u] ?? 'application/octet-stream';

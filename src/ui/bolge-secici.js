@@ -12,7 +12,7 @@ let sayac = 0;
  * @param secenek.onOneri    (oneri) => void
  * @param secenek.kutuSinifi (kutu) => string  kutuya eklenecek CSS sınıfı
  */
-export function bolgeSecici({ onDegisti = () => {}, oneriler = () => [], onOneri = () => {}, onSec = () => {}, kutuSinifi = () => '' } = {}) {
+export function bolgeSecici({ onDegisti = () => {}, oneriler = () => [], onOneri = () => {}, onSec = () => {}, kutuSinifi = () => '', yeniKutuVerisi = () => ({}) } = {}) {
   const st = { belge: null, sayfaSayisi: 0, no: 1, kutular: [], secili: null, ptW: 595, ptH: 842, olcek: 1, cizimModu: true };
   const sahne = h('div', { class: 'sahne-kap bs-sahne' });
   const etiket = h('span', { 'aria-live': 'polite' });
@@ -103,7 +103,8 @@ export function bolgeSecici({ onDegisti = () => {}, oneriler = () => [], onOneri
     const olcek = r.width / st.ptW;
     const [ax, ay] = [Math.min(x, son[0]) / olcek, Math.min(y, son[1]) / olcek];
     const [bx, by] = [Math.max(x, son[0]) / olcek, Math.max(y, son[1]) / olcek];
-    ekle(st.no, { x0: ax, x1: bx, y0: st.ptH - by, y1: st.ptH - ay });
+    // bas/son: çizimin başlangıç ve bitiş NOKTASI (yön gerektiren çizgi/ok için)
+    ekle(st.no, { x0: ax, x1: bx, y0: st.ptH - by, y1: st.ptH - ay, bas: [x / olcek, st.ptH - y / olcek], son: [son[0] / olcek, st.ptH - son[1] / olcek], ...yeniKutuVerisi() });
   };
   sahne.addEventListener('pointerup', bitir);
   sahne.addEventListener('pointercancel', bitir);

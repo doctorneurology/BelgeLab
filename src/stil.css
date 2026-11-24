@@ -327,3 +327,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .ex-mono { font-family: ui-monospace, Consolas, monospace; }
 .ex-orta { text-align: center; }
 .ex-kalin { font-weight: 700; }
+
+/* ---- Yeni araçlar ---- */
+.md-onizleme { max-height: 340px; overflow: auto; background: var(--yuzey-2); border: 1px solid var(--kenar); border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; font: 0.85rem/1.45 ui-monospace, Consolas, monospace; }
+.ex-sil { color: #b23b3b; text-decoration: line-through; overflow-wrap: anywhere; }
+.ex-ekle { color: #1f7a45; font-weight: 600; overflow-wrap: anywhere; }
+.bs-tur-vurgu { background: rgba(255, 235, 59, 0.40); border-color: #e6c200; }
+.bs-tur-elips { border-radius: 50%; }
+.bs-tur-cizgi, .bs-tur-ok { background: transparent; border-style: dashed; }

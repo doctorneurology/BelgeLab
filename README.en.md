@@ -12,10 +12,14 @@ A browser-based, **serverless**, open-source (MIT) set of **PDF and Excel** tool
 | Group | Tools |
 |---|---|
 | Edit pages | Merge · Split · Delete pages · Reorder · Rotate · Extract pages · Crop · **Fix text** (text-based PDFs; page layout stays identical) · **Fix text in scanned documents** (only in the region you select) |
-| Add to a document | Page numbers · Header/footer · Add watermark (and remove **only the ones this site added**) · Visible signature / text box · Fill forms |
-| Convert & shrink | **OCR** (read a scanned PDF in Turkish and make it searchable) · **PDF → Word (.docx)** · **Compress PDF** (quality-preserving) · Images to PDF · PDF to images (PNG/JPEG, ZIP) |
+| Improve | **OCR** (read a scanned PDF in Turkish and make it searchable) · **Compress PDF** (quality-preserving) · **Repair PDF** (tries to recover damaged/truncated files) |
+| Convert to PDF | **Word → PDF** · **PowerPoint → PDF** · **Excel → PDF** · **HTML → PDF** · Images to PDF · **Scan to PDF** (camera/gallery photos → clean scan) |
+| Convert from PDF | PDF → Word · **PDF → Markdown** (no page/file limit) · **PDF → Excel** · **PDF → PowerPoint** · PDF to images (PNG/JPEG, ZIP) · **Extract embedded images** · **PDF → PDF/A (experimental)** |
+| Add to a document | Page numbers · Header/footer · Add watermark (and remove **only the ones this site added**) · Visible signature / text box · **Shapes & highlighter** · Fill forms · **Create fillable forms** |
 | Excel | **Merge Excel files** (order kept, top rows to skip are adjustable) · **Patient application analysis** (auto-detects ID / name / application-no columns, counts people, shows cross-file presence, exports to Excel) |
-| Privacy & password | **Redact (true removal)** — text is erased from the picture *and* from the file · Add password (AES-256) · Remove password (**only if you know it**) |
+| Security & compare | **Redact (true removal)** — text is erased from the picture *and* from the file · Add password (AES-256) · Remove password (**only if you know it**) · **Compare PDFs** (text and visual differences) |
+
+**There is no page or file limit:** every tool processes as many pages as you give it (tests cover e.g. a 3000-paragraph HTML, a 5000-row spreadsheet, a 300-slide deck); only your device's memory is the limit.
 
 ## Screenshots
 
@@ -47,6 +51,24 @@ No PDF tool works perfectly on every document. The limitations we know of:
 - Automated tests run on Node.js; manual testing was done only in a Chromium-based browser (desktop + 375 px phone width). **Safari, Firefox and real phones have not been tested.**
 - Any change to a digitally signed document invalidates the signature; the output is a new unsigned file (a warning is shown).
 - Operations such as delete/extract/split copy pages into a new document; form fields, bookmarks and attachments may not carry over (a warning is shown).
+
+**PDF → Markdown / Excel / PowerPoint**
+- Structure (headings, paragraphs, tables, columns) is **guessed** from the PDF; two-column pages are read left → right, merged-cell/nested tables, formulas and text boxes may break. Markdown keeps http/https/mailto links, not internal links.
+- PDF → Excel finds tables only from text alignment (ruling lines are not read) and warns if none is found. PDF → PowerPoint substitutes similar fonts (Arial, Times New Roman, Calibri…); scanned pages become image-only slides.
+
+**Word / PowerPoint / Excel / HTML → PDF**
+- These are **not** Word, PowerPoint or a browser: appearance and page breaks will not be identical. Word: no headers/footers, footnotes, text boxes, shapes, equations or column sections; PowerPoint: no animations, SmartArt, charts, gradients or rotated objects (shapes are drawn as rectangles); Excel: no colours/borders/charts, values only as a table; HTML: no CSS, JavaScript, external images/styles or fetching by URL. Legacy .doc / .ppt are not supported. Unsupported items are listed in the result.
+
+**Repair PDF**
+- Damaged cross-reference tables and truncated file endings are recovered; if most of the file is missing (page data, fonts) recovery is impossible and this is stated clearly. The result is rendered and checked.
+
+**Scan to PDF / Compare / shapes & forms**
+- Scanning: no automatic page-edge detection or perspective correction; the black-and-white mode ruins photos. Compare: text diff relies on selectable text, visual diff on pixels; very long pages are limited to the first 3000 words for the word diff. Shapes land correctly on rotated pages; use the signature pad for freehand drawing. Form creation has no JavaScript validation/formatting or digital-signature fields.
+
+**PDF → PDF/A (EXPERIMENTAL)**
+- The output approaches PDF/A-2b but has **not** been validated with an official validator (veraPDF); conformance is not guaranteed. Pages are rasterised (file grows, fonts/vectors are lost; text is kept as a searchable layer).
+
+**In iLovePDF but NOT here:** AI summarising and translation (they require sending the file to an AI service, which breaks this site's "files never leave your device" principle), requesting e-signatures from others, workflows, desktop/mobile apps and account/subscription features.
 
 **Excel**
 - Only the **first sheet** of each file is read. In the analysis the header row is found within the first 15 rows by an "ID"/"name" header; unrecognised headers produce a per-file warning.

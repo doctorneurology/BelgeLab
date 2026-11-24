@@ -15,7 +15,15 @@ import { alanlariOlustur } from './alanlar.js';
 import { pdfOnizleme } from './onizleme.js';
 import { resimiPngYap } from './resim-yardim.js';
 
-const BUYUK_DOSYA = 150 * 1024 * 1024;
+// PDF/resim dışındaki dosya türleri (kabul listesi, uzantı denetimi, simge)
+const DOSYA_TURLERI = {
+  excel: { kabul: '.xlsx,.xls,.xlsm', re: /.(xlsx|xls|xlsm)$/i, ad: 'Excel dosyası (.xlsx / .xls)', ikon: '📊' },
+  word: { kabul: '.docx', re: /.docx$/i, ad: 'Word dosyası (.docx)', ikon: '📝' },
+  sunum: { kabul: '.pptx', re: /.pptx$/i, ad: 'PowerPoint dosyası (.pptx)', ikon: '📽️' },
+  html: { kabul: '.html,.htm,.xhtml,.txt', re: /.(html?|xhtml|txt)$/i, ad: 'HTML dosyası (.html / .htm / .txt)', ikon: '🌐' },
+};
+
+const BUYUK_DOSYA = 300 * 1024 * 1024; // yalnızca uyarı eşiği; sınır değildir
 
 
 /**
@@ -34,13 +42,14 @@ export function aracKur(tanim) {
   // ---- 1. Dosya seçimi ----
   const girdi = h('input', {
     type: 'file', id: 'dosya-girdisi',
-    accept: dosyaTanimi.tur === 'pdf' ? 'application/pdf,.pdf' : dosyaTanimi.tur === 'excel' ? '.xlsx,.xls,.xlsm' : 'image/*',
+    accept: dosyaTanimi.tur === 'pdf' ? 'application/pdf,.pdf' : DOSYA_TURLERI[dosyaTanimi.tur]?.kabul ?? 'image/*',
+    ...(dosyaTanimi.kamera ? { capture: 'environment' } : {}),
     multiple: dosyaTanimi.coklu,
   });
   const alan = h('label', { class: 'dosya-alani', for: 'dosya-girdisi' },
     h('strong', {}, dosyaTanimi.tur === 'pdf'
       ? (dosyaTanimi.coklu ? 'PDF dosyalarını seçin' : 'PDF dosyasını seçin')
-      : dosyaTanimi.tur === 'excel' ? (dosyaTanimi.coklu ? 'Excel dosyalarını seçin (.xlsx, .xls)' : 'Excel dosyasını seçin (.xlsx, .xls)') : 'Resimleri seçin'),
+      : DOSYA_TURLERI[dosyaTanimi.tur] ? `${DOSYA_TURLERI[dosyaTanimi.tur].ad}${dosyaTanimi.coklu ? ' dosyalarını' : ' dosyasını'} seçin` : 'Resimleri seçin'),
     h('span', { class: 'soluk' }, 'Dokunun/tıklayın ya da dosyayı buraya sürükleyin. Dosya cihazınızdan çıkmaz.'),
     girdi);
   const hataAlani = h('div', { 'aria-live': 'polite' });
@@ -56,6 +65,7 @@ export function aracKur(tanim) {
     dosyalar: () => durum.dosyalar,
     ilkDosya: () => durum.dosyalar[0],
     hata: (m) => hataGoster(m),
+    dosyaEkle: (dosyalar) => dosyaEkle(dosyalar), // kamera yakalaması gibi dışarıdan gelen dosyalar için
   };
   let ayarlar = null;
   if (tanim.ayar) ayarlar = tanim.ayar(ctx);
@@ -94,13 +104,15 @@ export function aracKur(tanim) {
     hataGoster('');
     if (!secilen.length) return;
     if (!dosyaTanimi.coklu) { durum.dosyalar = []; secilen = secilen.slice(0, 1); }
+    if (!durum.dosyalar.length) durum.buyukNot = [];
     for (const f of secilen) {
       try {
-        if (f.size > BUYUK_DOSYA) throw new PdfHatasi(`"${f.name}" çok büyük (${boyutMetni(f.size)}). Tarayıcı belleği yetmeyebilir; 150 MB'dan küçük dosyalar deneyin.`);
+        // Dosya/sayfa SINIRI YOK. Çok büyük dosyada yalnızca bilgi verilir (tarayıcı belleği cihazınıza bağlıdır).
+        if (f.size > BUYUK_DOSYA) (durum.buyukNot ??= []).push(kutu('bilgi', `“${f.name}” çok büyük (${boyutMetni(f.size)}). Dosya sınırı yoktur, ama işlem uzun sürebilir ve cihazınızın belleği yetmeyebilir; sorun olursa sayfa aralığı seçerek parça parça deneyin.`));
         let bayt = await dosyaOku(f);
         const girdiKaydi = { id: ++durum.sayac, ad: f.name, boyut: f.size };
         if (dosyaTanimi.tur === 'pdf') {
-          if (!new TextDecoder('latin1').decode(bayt.subarray(0, 1024)).includes('%PDF-')) {
+          if (!dosyaTanimi.bozukOlabilir && !new TextDecoder('latin1').decode(bayt.subarray(0, 1024)).includes('%PDF-')) {
             throw new PdfHatasi(`"${f.name}" bir PDF dosyası gibi görünmüyor.`);
           }
           girdiKaydi.bayt = bayt;
@@ -109,12 +121,14 @@ export function aracKur(tanim) {
             girdiKaydi.sayfa = d.getPageCount();
           } catch (e) {
             if (e instanceof SifreliPdfHatasi) girdiKaydi.sifreli = true;
-            else throw new PdfHatasi(`"${f.name}" açılamadı: ${e.message}`);
+            else if (!dosyaTanimi.bozukOlabilir) throw new PdfHatasi(`"${f.name}" açılamadı: ${e.message}`);
+            else girdiKaydi.bozuk = true; // onarma aracı bozuk dosyayı kabul eder
           }
-        } else if (dosyaTanimi.tur === 'excel') {
-          if (!/.(xlsx|xls|xlsm)$/i.test(f.name)) throw new PdfHatasi(`“${f.name}” bir Excel dosyası (.xlsx / .xls) değil.`);
+        } else if (DOSYA_TURLERI[dosyaTanimi.tur]) {
+          const T = DOSYA_TURLERI[dosyaTanimi.tur];
+          if (!T.re.test(f.name)) throw new PdfHatasi(`“${f.name}” beklenen türde değil: ${T.ad}.`);
           girdiKaydi.bayt = bayt;
-          girdiKaydi.excel = true;
+          girdiKaydi.simge = T.ikon;
         } else {
           let tur = resimTuru(bayt);
           if (tur !== 'png' && tur !== 'jpeg') {
@@ -139,7 +153,7 @@ export function aracKur(tanim) {
     adim2.hidden = !(hazir || durum.dosyalar.length > 0);
     calistirDugmesi.disabled = !hazir || kilitli || durum.mesgul;
     ipucuAlani.replaceChildren(!hazir && durum.dosyalar.length
-      ? kutu('bilgi', `Bu araç için en az ${dosyaTanimi.enAz} dosya gerekli; bir dosya daha ekleyin.`) : '');
+      ? kutu('bilgi', `Bu araç için en az ${dosyaTanimi.enAz} dosya gerekli; bir dosya daha ekleyin.`) : '', ...(durum.dosyalar.length ? (durum.buyukNot ?? []) : []));
     Promise.resolve(ayarlar?.dosyalarDegisti?.(durum.dosyalar)).catch((e) => {
       console.error(e);
       hataAlani.append(kutu('hata', kullaniciMesaji(e)));
@@ -150,7 +164,7 @@ export function aracKur(tanim) {
     liste.replaceChildren(...durum.dosyalar.map((d, i) => {
       const kucuk = d.resimUrl
         ? h('img', { class: 'kucuk-resim', src: d.resimUrl, alt: '' })
-        : d.excel ? h('span', { class: 'kucuk-resim', 'aria-hidden': 'true', stil: { fontSize: '1.6rem', textAlign: 'center' } }, '📊')
+        : d.simge ? h('span', { class: 'kucuk-resim', 'aria-hidden': 'true', stil: { fontSize: '1.6rem', textAlign: 'center' } }, d.simge)
           : h('canvas', { width: 40, height: 52, 'aria-hidden': 'true' });
       if (!d.resimUrl && d.sayfa && d.boyut < 60 * 1024 * 1024) kucukResimCiz(d, kucuk);
       const satir = h('li', { class: 'dosya-satir' },

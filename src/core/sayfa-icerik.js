@@ -61,6 +61,21 @@ export async function sayfaYazilari(belge, no) {
     if (Math.abs(y1 - y0) > 0.25 * Math.max(1, Math.abs(x1 - x0)) + 0.5 && w > boyut) { dondurulmus++; continue; }
     parcalar.push({ metin, x0: Math.min(x0, x1), x1: Math.max(x0, x1), y: y0, boyut, ...fontBilgi(o.fontName) });
   }
+  // Bağlantılar (yalnızca http/https/mailto): kesişen yazı parçalarına adres yazılır
+  try {
+    const ek = await sayfa.getAnnotations();
+    for (const a of ek) {
+      const url = a.url ?? a.unsafeUrl;
+      if (a.subtype !== 'Link' || !url || !/^(https?:|mailto:)/i.test(url) || !a.rect) continue;
+      const [rx0, ry0, rx1, ry1] = a.rect;
+      const n = [don(rx0, ry0), don(rx1, ry1)];
+      const k = { x0: Math.min(n[0][0], n[1][0]), x1: Math.max(n[0][0], n[1][0]), y0: Math.min(n[0][1], n[1][1]), y1: Math.max(n[0][1], n[1][1]) };
+      for (const p of parcalar) {
+        const ortaX = (p.x0 + p.x1) / 2, ortaY = p.y + p.boyut * 0.3;
+        if (!p.url && ortaX >= k.x0 && ortaX <= k.x1 && ortaY >= k.y0 && ortaY <= k.y1) p.url = url;
+      }
+    }
+  } catch { /* bağlantı okunamazsa yazı yine de aktarılır */ }
   sayfa.cleanup();
   return { genislik: vp.width, yukseklik: vp.height, parcalar, dondurulmus };
 }
