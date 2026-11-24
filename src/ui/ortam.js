@@ -8,8 +8,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = isciUrl;
 
 const vp = (yol) => new URL(`pdfjs/${yol}`, document.baseURI).href;
 
+let ortakIsci = null;
 renderOrtamiAyarla({
   pdfjs,
+  isci: () => { ortakIsci ??= new pdfjs.PDFWorker({ name: 'ortak' }); return ortakIsci; },
   tuvalOlustur: (w, h) => {
     const c = document.createElement('canvas');
     c.width = w;

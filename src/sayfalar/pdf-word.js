@@ -9,6 +9,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'pdf-word',
+  topluBitti: () => ocrKapat(), // toplu kipte OCR motoru bir kez açılır, en sonda kapatılır
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Ayarlar',
   dugme: 'Word’e çevir',
@@ -26,7 +27,7 @@ aracKur({
     { id: 'resimler', tur: 'onay', etiket: 'Resimleri aktar', varsayilan: true },
     { id: 'ustAlt', tur: 'onay', etiket: 'Sayfa numaralarını ve her sayfada tekrarlanan üst/alt bilgiyi atla', varsayilan: true },
   ],
-  async calistir({ dosyalar, ayarlar: a, ilerleme }) {
+  async calistir({ dosyalar, ayarlar: a, ilerleme, toplu = false }) {
     const d = dosyalar[0];
     if (a.ocr !== 'yok') await ocrHazirla();
     try {
@@ -43,7 +44,7 @@ aracKur({
         ekler: [hizliGecis('Hızlı geçiş', ['ocr', 'sikistir'], '(isterseniz önce PDF’i sadeleştirin)')],
       };
     } finally {
-      await ocrKapat();
+      if (!toplu) await ocrKapat();
     }
   },
 });

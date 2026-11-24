@@ -7,7 +7,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'word-pdf',
-  dosya: { tur: 'word', coklu: true, enAz: 1 },
+  dosya: { tur: 'word' },
   ayarBasligi: 'Hazır',
   dugme: 'PDF’e çevir',
   notlar: [

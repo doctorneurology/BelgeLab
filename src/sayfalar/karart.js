@@ -14,6 +14,7 @@ let sonTerimler = [];
 
 aracKur({
   slug: 'karart',
+  topluBitti: () => ocrKapat(), // toplu kipte OCR motoru en sonda kapatılır
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Karartılacak yerleri belirleyin',
   dugme: 'Kalıcı olarak karart',
@@ -23,7 +24,7 @@ aracKur({
       'Karartılan yerdeki yazı ve resim, sayfa yeniden resimlendiği için DOSYADAN gerçekten silinir (siyah kutu çizip altını bırakmak değildir). Özgün dosyanızı saklayın; çıktıyı onunla karıştırmayın.')),
     kutu('bilgi', 'Karartılan sayfalar resme dönüşür; kalan yazı aranabilir bırakılır. Yer imleri, ekler, form alanları ve belge bilgileri (başlık/yazar) yeni dosyaya taşınmaz.'),
   ],
-  ayar() {
+  ayar(ctx) {
     const st = { bayt: null, belge: null, aktifId: null };
     const durum = h('div', { 'aria-live': 'polite' });
     const liste = h('div', { class: 'bs-liste' });
@@ -68,9 +69,10 @@ aracKur({
         h('button', { type: 'button', class: 'kucuk-dugme tehlike', onclick: () => secici.temizle() }, 'Hepsini temizle'));
     }
 
+    const terimleriTopla = () => [...terimler.value.split('\n').map((s) => s.trim()).filter(Boolean), ...desenler.filter((x) => x.girdi.checked).map((x) => x.d)];
+
     async function bul() {
-      const liste1 = terimler.value.split('\n').map((s) => s.trim()).filter(Boolean);
-      const terimListesi = [...liste1, ...desenler.filter((x) => x.girdi.checked).map((x) => x.d)];
+      const terimListesi = terimleriTopla();
       if (!terimListesi.length) { durum.replaceChildren(kutu('uyari', 'Önce aranacak bir sözcük yazın ya da bir “kolay seçim” işaretleyin.')); return; }
       bulDugme.disabled = true;
       durum.replaceChildren(h('p', { class: 'soluk' }, 'Aranıyor…'));
@@ -110,26 +112,39 @@ aracKur({
       },
       oku() {
         const k = secici.kutular();
-        if (!k.length) throw new PdfHatasi('Karartılacak yer seçilmedi. Sayfada sürükleyerek bir alan çizin ya da yukarıdan metin arayın.');
+        const terimListesi = terimleriTopla();
+        const toplu = ctx.dosyalar().length > 1;
+        // Toplu kipte metne göre arama her dosyada YENİDEN yapılır; elle çizilen kutular aynı sayfa/konumda her dosyaya uygulanır.
+        if (!k.length && !(toplu && terimListesi.length)) throw new PdfHatasi('Karartılacak yer seçilmedi. Sayfada sürükleyerek bir alan çizin ya da yukarıdan metin arayın.');
         return {
-          kutular: k.map(({ sayfa, x0, y0, x1, y1 }) => ({ sayfa, x0, y0, x1, y1 })),
+          kutular: k.map(({ sayfa, x0, y0, x1, y1, otomatik }) => ({ sayfa, x0, y0, x1, y1, otomatik: !!otomatik })),
+          terimler: terimListesi, ocr: ocrOnay.checked,
           renk: renk.value, dpi: Number(dpi.value), aranabilir: aranabilir.checked,
         };
       },
     };
   },
-  async calistir({ dosyalar, ayarlar: a, ilerleme }) {
+  async calistir({ dosyalar, ayarlar: a, ilerleme, toplu = false }) {
     const d = dosyalar[0];
-    const r = await karart(d.bayt, { kutular: a.kutular, renk: a.renk, dpi: a.dpi, aranabilirKalsin: a.aranabilir, ilerleme: (k, n) => ilerleme(k, n) });
+    const kutular = toplu ? a.kutular.filter((k) => !k.otomatik) : a.kutular;
+    const ara = toplu ? a.terimler : [];
+    let r;
+    try {
+      if (toplu && a.ocr && ara.length) await ocrHazirla();
+      r = await karart(d.bayt, { kutular: kutular.map(({ sayfa, x0, y0, x1, y1 }) => ({ sayfa, x0, y0, x1, y1 })), ara, ocr: toplu && a.ocr, renk: a.renk, dpi: a.dpi, aranabilirKalsin: a.aranabilir, ilerleme: (k, n) => ilerleme(k, n) });
+    } catch (e) { throw e; }
+    // GÜVENLİK: hiçbir şey karartılmadıysa (aranan metin bulunamadı) dosya "karartılmış" adıyla VERİLMEZ
+    if (!r.degisti) throw new PdfHatasi('Karartılacak bir şey bulunamadı (aranan metin yok); dosya değiştirilmedi ve çıktı verilmedi.');
     if (!r.rapor.dogrulama.gecti) {
       throw new PdfHatasi(`Doğrulama başarısız: karartılan alanda ${r.rapor.dogrulama.kutuIciYazi} yazı parçası kalmış görünüyor. Güvenlik için dosya verilmedi; kutuları biraz büyütüp yeniden deneyin.`);
     }
     // İkinci görüş: arama terimleri çıktıda hâlâ geçiyor mu?
     const ekler = [];
     const bilgiler = [];
-    if (sonTerimler.length) {
+    const denetimTerimleri = toplu ? ara : sonTerimler;
+    if (denetimTerimleri.length) {
       try {
-        const kalan = await karartmaAra(r.bayt, sonTerimler);
+        const kalan = await karartmaAra(r.bayt, denetimTerimleri);
         bilgiler.push(kalan.eslesmeler.length
           ? `Arama denetimi: çıktıda aranan sözcüklerden ${kalan.eslesmeler.length} yer hâlâ bulunuyor. Bunlar sizin sildiğiniz kutular ya da OCR ile okunamayan yerler olabilir; sonucu gözle kontrol edin.`
           : 'Arama denetimi: çıktıda aranan sözcüklerin hiçbiri bulunmuyor.');

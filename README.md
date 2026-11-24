@@ -21,6 +21,8 @@ Tarayıcıda çalışan, **sunucusuz**, açık kaynaklı (MIT) bir **PDF ve Exce
 
 **Sayfa ve dosya sınırı yoktur:** tüm araçlar istediğiniz kadar sayfayı işler (örneğin 3000 paragraflık HTML, 5000 satırlık Excel, 300 slaytlık sunum testlerle denendi); yalnızca cihazınızın belleği sınırdır.
 
+**Toplu işlem:** tek dosya alan her araçta (sıkıştır, OCR, PDF → Word/Markdown/Excel/PowerPoint, Word/Excel/PowerPoint → PDF, karartma, şifre ekle/kaldır, filigran, sayfa numarası… ) **istediğiniz kadar dosyayı** (ya da bir **klasörü**) aynı anda yükleyebilirsiniz. Dosyalar sırayla, aynı ayarlarla işlenir; her biri için ayrı çıktı üretilir ve hepsi ZIP olarak iner. Hatalı dosya atlanır (nedeni listelenir), diğerleri sürer; işlem iptal edilebilir. Testlerde 500 PDF tek seferde yüklenip dönüştürüldü (yaklaşık 3 dakika; süre dosya içeriğine göre değişir). Birleştirme, karşılaştırma, resimden PDF ve tara gibi zaten çoklu dosya alan araçlar bu kipe ihtiyaç duymaz; sayfa/bölge seçtiğiniz araçlarda (yazı düzelt, taranmış belgede düzelt, şekil ekle, form oluştur/doldur, sayfa sırala) toplu kip yoktur.
+
 Türkçe karakterler (ğ ş ı İ ö ü ç) tüm araçlarda sorunsuz çalışır: açık lisanslı, ölçü uyumlu yazı tipleri
 (Liberation, Carlito, Caladea, Noto) ve Türkçe OCR dil verisi projeye dahildir.
 

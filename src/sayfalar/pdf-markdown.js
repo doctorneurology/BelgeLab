@@ -19,6 +19,7 @@ function onizleme(md) {
 
 aracKur({
   slug: 'pdf-markdown',
+  topluBitti: () => ocrKapat(), // toplu kipte OCR motoru bir kez açılır, en sonda kapatılır
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Ayarlar',
   dugme: 'Markdown’a çevir',
@@ -34,7 +35,7 @@ aracKur({
     { id: 'ayirac', tur: 'onay', etiket: 'Sayfa ayracı ekle (<!-- Sayfa N --> ve çizgi)', varsayilan: false },
     { id: 'ustAlt', tur: 'onay', etiket: 'Sayfa numaralarını ve tekrarlanan üst/alt bilgiyi atla', varsayilan: true },
   ],
-  async calistir({ dosyalar, ayarlar: a, ilerleme }) {
+  async calistir({ dosyalar, ayarlar: a, ilerleme, toplu = false }) {
     const d = dosyalar[0];
     if (a.ocr !== 'yok') await ocrHazirla();
     try {
@@ -49,6 +50,6 @@ aracKur({
         uyarilar: r.uyarilar,
         ekler: [onizleme(r.md), hizliGecis('Hızlı geçiş', ['pdf-word', 'pdf-excel', 'ocr'])],
       };
-    } finally { await ocrKapat(); }
+    } finally { if (!toplu) await ocrKapat(); }
   },
 });

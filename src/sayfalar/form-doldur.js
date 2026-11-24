@@ -6,6 +6,7 @@ import { YAZI_AILELERI } from '../core/fonts.js';
 
 aracKur({
   slug: 'form-doldur',
+  toplu: false, // dosyaya özel arayüz (sayfa/bölge seçimi); toplu kip yok
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Formu doldurun',
   dugme: 'Formu kaydet',

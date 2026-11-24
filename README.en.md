@@ -21,6 +21,8 @@ A browser-based, **serverless**, open-source (MIT) set of **PDF and Excel** tool
 
 **There is no page or file limit:** every tool processes as many pages as you give it (tests cover e.g. a 3000-paragraph HTML, a 5000-row spreadsheet, a 300-slide deck); only your device's memory is the limit.
 
+**Batch processing:** every tool that takes a single file (compress, OCR, PDF → Word/Markdown/Excel/PowerPoint, Word/Excel/PowerPoint → PDF, redact, add/remove password, watermark, page numbers…) accepts **as many files as you like** (or a whole **folder**) at once. Files are processed one after another with the same settings; each gets its own output and everything downloads as ZIP files. A failing file is skipped (the reason is listed) and the rest continue; the run can be cancelled. In testing, 500 PDFs were loaded and converted in one go (about 3 minutes; it depends on file contents). Tools that already take several files (merge, compare, images to PDF, scan) don't need it; tools where you pick pages/regions (fix text, fix scanned text, add shapes, create/fill forms, reorder pages) have no batch mode.
+
 ## Screenshots
 
 > The images below are **placeholders** for now. Take real screenshots and save them with the **same file names** in `docs/ekran-goruntuleri/`

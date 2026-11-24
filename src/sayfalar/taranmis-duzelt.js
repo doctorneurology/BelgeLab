@@ -16,6 +16,7 @@ const aileSecenekleri = (secili) => Object.entries(YAZI_AILELERI).map(([k, a]) =
 
 aracKur({
   slug: 'taranmis-duzelt',
+  toplu: false, // dosyaya özel arayüz (sayfa/bölge seçimi); toplu kip yok
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Düzeltilecek yeri seçin',
   dugme: 'Düzeltmeleri uygula',

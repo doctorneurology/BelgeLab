@@ -8,6 +8,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'ocr',
+  topluBitti: () => ocrKapat(), // toplu kipte OCR motoru bir kez açılır, en sonda kapatılır
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Ayarlar',
   dugme: 'Yazıyı oku (OCR)',
@@ -22,7 +23,7 @@ aracKur({
     { id: 'dpi', tur: 'secim', etiket: 'Okuma çözünürlüğü', varsayilan: '300', secenekler: [{ deger: '200', ad: '200 dpi (hızlı)' }, { deger: '300', ad: '300 dpi (önerilen)' }, { deger: '400', ad: '400 dpi (küçük yazılar, yavaş)' }] },
     { id: 'yine', tur: 'onay', etiket: 'Zaten yazısı olan sayfaları da oku', aciklama: 'Genellikle gerekmez; yazı iki kez bulunabilir.' },
   ],
-  async calistir({ dosyalar, ayarlar: a, ilerleme }) {
+  async calistir({ dosyalar, ayarlar: a, ilerleme, toplu = false }) {
     const d = dosyalar[0];
     await ocrHazirla();
     try {
@@ -42,7 +43,7 @@ aracKur({
         ekler: [hizliGecis('Hızlı geçiş', ['taranmis-duzelt', 'pdf-word', 'sikistir', 'karart'], '(dosyayı o sayfada yeniden seçmeniz gerekir; dosyalarınız hiçbir yere gönderilmez)')],
       };
     } finally {
-      await ocrKapat();
+      if (!toplu) await ocrKapat();
     }
   },
 });

@@ -7,7 +7,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'excel-pdf',
-  dosya: { tur: 'excel', coklu: true, enAz: 1 },
+  dosya: { tur: 'excel' },
   ayarBasligi: 'Ayarlar',
   dugme: 'PDF’e çevir',
   notlar: [

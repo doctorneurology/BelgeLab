@@ -19,6 +19,7 @@ let sonOrijinal = null;
 
 aracKur({
   slug: 'yazi-duzelt',
+  toplu: false, // dosyaya özel arayüz (sayfa/bölge seçimi); toplu kip yok
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Yazıya tıklayın ve düzeltin',
   dugme: 'Düzeltilmiş PDF’i oluştur',

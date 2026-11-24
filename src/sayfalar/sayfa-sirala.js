@@ -6,6 +6,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'sayfa-sirala',
+  toplu: false, // dosyaya özel arayüz (sayfa/bölge seçimi); toplu kip yok
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Sayfaları istediğiniz sıraya dizin',
   dugme: 'Bu sırayla kaydet',

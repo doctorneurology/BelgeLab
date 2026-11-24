@@ -28,7 +28,18 @@ export const $ = (s, k = document) => k.querySelector(s);
 export const bekle = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Tarayıcının boyayabilmesi için bir an ver. */
-export const boyamaBekle = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+// Sekme arka plandayken requestAnimationFrame HİÇ çalışmaz; bu yüzden zaman aşımıyla yarıştırılır (toplu işlem donmasın).
+export const boyamaBekle = () => Promise.race([
+  new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))),
+  new Promise((r) => setTimeout(r, 120)),
+]);
+
+/** Arayüze nefes aldırır ama arka plan sekmesinde de hızla döner (MessageChannel zamanlayıcılar gibi kısılmaz). */
+export const birakVer = () => new Promise((r) => {
+  const k = new MessageChannel();
+  k.port1.onmessage = () => { k.port1.close(); r(); };
+  k.port2.postMessage(0);
+});
 
 export async function dosyaOku(dosya) {
   return new Uint8Array(await dosya.arrayBuffer());

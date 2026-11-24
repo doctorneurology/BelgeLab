@@ -12,6 +12,7 @@ const TURLER = [['dikdortgen', '▭ Dikdörtgen'], ['elips', '⬭ Elips'], ['ciz
 
 aracKur({
   slug: 'isaretle',
+  toplu: false, // dosyaya özel arayüz (sayfa/bölge seçimi); toplu kip yok
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Sayfaya çizin',
   dugme: 'Şekilleri ekle',

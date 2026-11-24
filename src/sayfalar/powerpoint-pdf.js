@@ -7,7 +7,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'powerpoint-pdf',
-  dosya: { tur: 'sunum', coklu: true, enAz: 1 },
+  dosya: { tur: 'sunum' },
   ayarBasligi: 'Hazır',
   dugme: 'PDF’e çevir',
   notlar: [

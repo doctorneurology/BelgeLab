@@ -12,6 +12,7 @@ const TURLER = [['metin', 'Metin kutusu'], ['cokSatir', 'Çok satırlı metin'],
 
 aracKur({
   slug: 'form-olustur',
+  toplu: false, // dosyaya özel arayüz (sayfa/bölge seçimi); toplu kip yok
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Form alanlarını çizin',
   dugme: 'Form alanlarını ekle',

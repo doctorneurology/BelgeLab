@@ -23,6 +23,7 @@ export async function belgeAc(bayt, { sifre, ek = {} } = {}) {
     isEvalSupported: false,
     verbosity: 0,
     ...belgeSecenekleri,
+    ...(ortam().isci ? { worker: ortam().isci() } : {}), // tarayıcıda tek ortak işçi: yüzlerce belgede her seferinde yeni işçi başlatılmaz
     ...ek, // ör. { fontExtraProperties: true } → gerçek yazı tipi adları
   });
   try {

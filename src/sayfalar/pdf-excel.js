@@ -9,6 +9,7 @@ import { dosyaAdiTuret } from '../core/util.js';
 
 aracKur({
   slug: 'pdf-excel',
+  topluBitti: () => ocrKapat(), // toplu kipte OCR motoru bir kez açılır, en sonda kapatılır
   dosya: { tur: 'pdf' },
   ayarBasligi: 'Ayarlar',
   dugme: 'Excel’e çevir',
@@ -25,7 +26,7 @@ aracKur({
     { id: 'ondalik', tur: 'secim', etiket: 'Sayı biçimi', varsayilan: 'tr', secenekler: [{ deger: 'tr', ad: 'Türkçe: 1.234,5' }, { deger: 'en', ad: 'İngilizce: 1,234.5' }], goster: (d) => d.sayilar },
     { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku (Türkçe)' }, { deger: 'yok', ad: 'Okuma' }] },
   ],
-  async calistir({ dosyalar, ayarlar: a, ilerleme }) {
+  async calistir({ dosyalar, ayarlar: a, ilerleme, toplu = false }) {
     const d = dosyalar[0];
     if (a.ocr !== 'yok') await ocrHazirla();
     try {
@@ -36,6 +37,6 @@ aracKur({
         uyarilar: r.uyarilar,
         ekler: [hizliGecis('Hızlı geçiş', ['pdf-word', 'pdf-markdown', 'excel-analiz'])],
       };
-    } finally { await ocrKapat(); }
+    } finally { if (!toplu) await ocrKapat(); }
   },
 });
