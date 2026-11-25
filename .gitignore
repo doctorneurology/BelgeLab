@@ -1,6 +1,7 @@
 node_modules/
 dist/
 public/pdfjs/
+public/pdfium/
 coverage/
 
 # Örnek PDF testlerinin çıktıları (kişisel belgelerden üretildiği için ASLA depoya girmez)

@@ -1,9 +1,11 @@
 // Tarayıcı ortamı: pdf.js (çizim), qpdf (şifre) ve tuval ayarları. Her araç sayfasında bir kez kurulur.
 import * as pdfjs from 'pdfjs-dist';
 import isciUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import pdfiumWasmUrl from '@embedpdf/pdfium/pdfium.wasm?url';
 import qpdfWasmUrl from '@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url';
 import { renderOrtamiAyarla } from '../core/render.js';
 import { tuvaldenPng } from '../core/png.js';
+import { pdfiumOrtamiAyarla } from '../core/pdf-word-duzen.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = isciUrl;
 
@@ -55,6 +57,9 @@ renderOrtamiAyarla({
     iccUrl: vp('iccs/'),
   },
 });
+
+// PDFium WASM (PDF → Word "düzeni koru" kipi): yalnızca kullanılınca indirilir, sitenin kendi klasöründedir.
+pdfiumOrtamiAyarla({ wasmYukle: async () => new Uint8Array(await (await fetch(new URL(pdfiumWasmUrl, document.baseURI))).arrayBuffer()) });
 
 /** Şifre bileşenini (qpdf) yalnızca gerektiğinde yükler. */
 export async function sifreModulu() {

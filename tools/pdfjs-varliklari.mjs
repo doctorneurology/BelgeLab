@@ -18,3 +18,13 @@ for (const d of ['standard_fonts', 'cmaps', 'wasm', 'iccs']) {
 }
 cpSync(resolve(kaynak, 'LICENSE'), resolve(hedef, 'LICENSE-pdfjs.txt'));
 console.log('pdf.js yardımcı dosyaları public/pdfjs altına kopyalandı.');
+
+// PDFium (EmbedPDF derlemesi, WASM): PDF → Word "Düzeni koru" kipi için. WASM dosyasını Vite paketler (src/ui/ortam.js); burada yalnızca lisans metinleri kopyalanır.
+const pdfiumKaynak = resolve(kok, 'node_modules', '@embedpdf', 'pdfium');
+const pdfiumHedef = resolve(kok, 'public', 'pdfium');
+if (existsSync(resolve(pdfiumKaynak, 'dist', 'pdfium.wasm'))) {
+  rmSync(pdfiumHedef, { recursive: true, force: true });
+  mkdirSync(pdfiumHedef, { recursive: true });
+  for (const l of ['LICENSE', 'LICENSE.pdfium']) if (existsSync(resolve(pdfiumKaynak, l))) cpSync(resolve(pdfiumKaynak, l), resolve(pdfiumHedef, `LICENSE-embedpdf-${l}.txt`));
+  console.log('PDFium lisans metinleri public/pdfium altına kopyalandı (wasm dosyası derlemeye kendiliğinden girer).');
+}

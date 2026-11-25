@@ -44,3 +44,14 @@ Yazı tipleri yalnızca PDF'e gömülürken (alt küme olarak) kullanılır; yaz
 ## Yalnızca geliştirme ve test sırasında kullanılanlar
 
 Vite (MIT), Vitest (MIT), `@napi-rs/canvas` (MIT), pixelmatch (ISC), pngjs (MIT), JSZip (MIT ya da GPL-3.0+ ikili lisans; **MIT** seçeneği kullanılır, yalnızca testlerde).
+
+## PDF → Word "Düzeni koru" kipi
+
+| Bileşen | Sürüm | Lisans | Ne için |
+|---|---|---|---|
+| GenOffice (pdf2docx, docx-engine, pptx-engine, font-metrics, zip-gate, agent-core) — kaynak kodu `vendor/genoffice/` | a6ff5ff | Apache-2.0 (Mainfunc, Inc.) | PDF → Word dönüştürme (düzeni koruyan kip). Değiştirilmeden alınmıştır; ayrıntı: `vendor/genoffice/PROVENANCE.md` |
+| @embedpdf/pdfium (PDFium WASM derlemesi) | 2.15.1 | MIT (PDFium: BSD-3-Clause) | PDF içeriğini karakter düzeyinde okuma |
+| bidi-js | 1.1.0 | MIT | Sağdan sola yazı sıralaması |
+| fast-xml-parser | 5.12.1 | MIT | OOXML okuma |
+| utif2 | 4.1.0 | MIT | TIFF/EMF resim çözme |
+| jszip | 3.10.2 | MIT (MIT OR GPL-3.0 çifte lisansından MIT seçilmiştir) | DOCX/ZIP paketleme |

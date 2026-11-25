@@ -7,6 +7,8 @@ import Tesseract from 'tesseract.js';
 import { renderOrtamiAyarla } from '../src/core/render.js';
 import { qpdfWasmAyarla } from '../src/core/sifre.js';
 import { ocrOrtamiAyarla } from '../src/core/ocr.js';
+import { pdfiumOrtamiAyarla } from '../src/core/pdf-word-duzen.js';
+import { readFileSync } from 'node:fs';
 
 const kok = fileURLToPath(new URL('../', import.meta.url));
 const pdfjsKlasoru = `${kok}node_modules/pdfjs-dist/`;
@@ -21,6 +23,11 @@ export function nodeOrtaminiKur() {
     createWorker: Tesseract.createWorker,
     // Önce sitenin kendi dil klasörü (tur + eng bir arada); yoksa npm paketindeki Türkçe verisi
     secenekler: { langPath: existsSync(`${kok}public/tesseract/lang/eng.traineddata.gz`) ? `${kok}public/tesseract/lang` : `${kok}node_modules/@tesseract.js-data/tur/4.0.0_best_int` },
+  });
+  // PDFium (PDF → Word "düzeni koru" kipi): wasm yerel diskten okunur
+  pdfiumOrtamiAyarla({
+    wasmYukle: async () => new Uint8Array(readFileSync(`${kok}node_modules/@embedpdf/pdfium/dist/pdfium.wasm`)),
+    ek: { thisProgram: '/usr/bin/node', ENV: Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== undefined && !/[Ā-􏿿]/u.test(v))) },
   });
   renderOrtamiAyarla({
     pdfjs,
