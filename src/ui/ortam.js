@@ -3,15 +3,16 @@ import * as pdfjs from 'pdfjs-dist';
 import isciUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import qpdfWasmUrl from '@neslinesli93/qpdf-wasm/dist/qpdf.wasm?url';
 import { renderOrtamiAyarla } from '../core/render.js';
+import { tuvaldenPng } from '../core/png.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = isciUrl;
 
 const vp = (yol) => new URL(`pdfjs/${yol}`, document.baseURI).href;
 
-let ortakIsci = null;
+const iscilar = []; // her PDF okuyucu kulvarı kendi pdf.js işçisini (ayrı iş parçacığı) kullanır
 renderOrtamiAyarla({
   pdfjs,
-  isci: () => { ortakIsci ??= new pdfjs.PDFWorker({ name: 'ortak' }); return ortakIsci; },
+  isci: (no = 0) => (iscilar[no] ??= new pdfjs.PDFWorker({ name: `isci-${no}` })),
   tuvalOlustur: (w, h) => {
     const c = document.createElement('canvas');
     c.width = w;
@@ -22,14 +23,17 @@ renderOrtamiAyarla({
     const im = await createImageBitmap(new Blob([bayt]));
     return { genislik: im.width, yukseklik: im.height, cizilebilir: im };
   },
-  tuvaliBayta: (tuval, bicim, kalite) =>
-    new Promise((coz, red) => {
+  tuvaliBayta: async (tuval, bicim, kalite) => {
+    // PNG: tuval.toBlob çok yavaş ve ana iş parçacığını tutar; hızlı yazıcı (sıkıştırma ayrı işçide) kullanılır.
+    if (bicim !== 'jpeg') { try { return await tuvaldenPng(tuval); } catch { /* bellek/destek sorunu: tarayıcı kodlayıcısına dön */ } }
+    return new Promise((coz, red) => {
       tuval.toBlob(
         async (b) => (b ? coz(new Uint8Array(await b.arrayBuffer())) : red(new Error('Resim üretilemedi (sayfa çok büyük olabilir).'))),
         bicim === 'jpeg' ? 'image/jpeg' : 'image/png',
         kalite,
       );
-    }),
+    });
+  },
   belgeSecenekleri: {
     standardFontDataUrl: vp('standard_fonts/'),
     cMapUrl: vp('cmaps/'),

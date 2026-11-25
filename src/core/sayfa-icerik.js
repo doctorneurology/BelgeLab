@@ -1,7 +1,8 @@
 // Bir PDF sayfasının içeriğini (yazı parçaları ve resimler) pdf.js ile "görünür" koordinatlarda çıkarır.
 // Koordinatlar: nokta (1/72 inç), orijin ekranda görünen sol-alt köşe. Word dönüştürücüsü bunu kullanır.
 
-import { belgeAc, pdfjsOps, tuvalOlustur, tuvaliBayta } from './render.js';
+import { belgeAc, pdfjsOps, tuvalOlustur } from './render.js';
+import { pngKodla, tuvaldenPng } from './png.js';
 
 const KALIN = /(bold|black|heavy|semibold|demi|extrabold|ultra|[-_,]bd\b|bdit)/i;
 const ITALIK = /(italic|oblique|[-_,]it\b|kursiv|slanted)/i;
@@ -98,28 +99,20 @@ function nesneBekle(sayfa, id, ms = 1500) {
 async function resmiPngYap(o) {
   const w = o.width, h = o.height;
   if (!(w > 0 && h > 0)) return null;
-  const tuval = tuvalOlustur(w, h);
-  const g = tuval.getContext('2d');
+  // Ham pikseller doğrudan hızlı PNG yazıcıya gider (tuval kodlaması yavaş); sıkıştırma ayrı iş parçacığında yapılır.
+  if (o.data) {
+    const s = o.data;
+    if (o.kind === 2 && s.length >= w * h * 3) return pngKodla({ genislik: w, yukseklik: h, veri: s, tur: 'rgb' });
+    if (o.kind === 3 && s.length >= w * h * 4) return pngKodla({ genislik: w, yukseklik: h, veri: s, tur: 'rgba' });
+    if (o.kind === 1 && s.length >= Math.ceil(w / 8) * h) return pngKodla({ genislik: w, yukseklik: h, veri: s, tur: 'gri1' });
+    return null;
+  }
   if (o.bitmap) {
-    g.drawImage(o.bitmap, 0, 0, w, h);
-  } else if (o.data) {
-    const kare = g.createImageData(w, h);
-    const d = kare.data, s = o.data;
-    if (o.kind === 2) { // RGB 24 bit
-      for (let i = 0, j = 0; i < w * h; i++, j += 3) { d[i * 4] = s[j]; d[i * 4 + 1] = s[j + 1]; d[i * 4 + 2] = s[j + 2]; d[i * 4 + 3] = 255; }
-    } else if (o.kind === 3) { // RGBA 32 bit
-      d.set(s.subarray(0, w * h * 4));
-    } else if (o.kind === 1) { // 1 bit gri, satır başına bayt sınırı
-      const satir = Math.ceil(w / 8);
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        const v = (s[y * satir + (x >> 3)] >> (7 - (x & 7))) & 1 ? 255 : 0;
-        const i = (y * w + x) * 4;
-        d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
-      }
-    } else return null;
-    g.putImageData(kare, 0, 0);
-  } else return null;
-  return tuvaliBayta(tuval, 'png');
+    const tuval = tuvalOlustur(w, h);
+    tuval.getContext('2d').drawImage(o.bitmap, 0, 0, w, h);
+    return tuvaldenPng(tuval);
+  }
+  return null;
 }
 
 /**

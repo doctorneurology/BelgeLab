@@ -6,7 +6,7 @@
 // satır kaymaları ve yazı tipi farkları olabilir. Taranmış sayfalar yalnızca resim olarak eklenir. SAYFA/DOSYA SINIRI YOKTUR.
 
 import PptxGenJS from 'pptxgenjs';
-import { belgeAc, sayfaCiz, tuvaliBayta } from './render.js';
+import { belgeAc, sayfaCiz, tuvaliBayta, paralelSayfalar } from './render.js';
 import { yaziAnalizEt, yazilariKaldir } from './yazi/motor.js';
 import { sayfaSecimi } from './util.js';
 import { PdfHatasi } from './hatalar.js';
@@ -31,13 +31,13 @@ export async function pdfdenPowerPoint(bayt, { sayfalar = '', mod = 'duzenlenebi
   if (!['duzenlenebilir', 'resim'].includes(mod)) throw new PdfHatasi('Kip “duzenlenebilir” ya da “resim” olmalı.');
   const uyarilar = [];
   const belge = await belgeAc(bayt);
-  let ozet = null, yaziSizBelge = null;
+  let ozet = null, yaziSizBayt = null;
   try {
     const secili = sayfaSecimi(sayfalar, belge.numPages);
     if (mod === 'duzenlenebilir') {
       try {
         ozet = await yaziAnalizEt(bayt, { sayfalar: secili });
-        if (ozet.yaziVar) yaziSizBelge = await belgeAc(await yazilariKaldir(bayt, { sayfalar: secili }));
+        if (ozet.yaziVar) yaziSizBayt = await yazilariKaldir(bayt, { sayfalar: secili });
       } catch (e) {
         uyarilar.push(`Yazılar çözümlenemedi (${e?.message ?? e}); slaytlar resim olarak eklendi.`);
         ozet = null;
@@ -54,21 +54,26 @@ export async function pdfdenPowerPoint(bayt, { sayfalar = '', mod = 'duzenlenebi
     pptx.layout = 'PDF';
 
     let metinKutusu = 0, resimSlayt = 0, farkliBoyut = 0;
-    for (let k = 0; k < secili.length; k++) {
-      const no = secili[k] + 1;
-      ilerleme?.(k, secili.length, `Sayfa ${no} işleniyor…`);
+    // Sayfa görüntüleri (en ağır iş) birden çok PDF okuyucuyla aynı anda üretilir; slaytlar sonra sırayla kurulur.
+    let biten = 0;
+    const gorseller = await paralelSayfalar({ ana: bayt, ...(yaziSizBayt ? { yazisiz: yaziSizBayt } : {}) }, secili.map((x) => x + 1), async (b, no, _k, al) => {
       const sayfaOzet = ozet?.sayfalar.find((s) => s.no === no);
       const yaziliSayfa = !!sayfaOzet?.satirlar.some((l) => l.metin?.trim());
-      const kaynakBelge = mod === 'duzenlenebilir' && yaziliSayfa && yaziSizBelge ? yaziSizBelge : belge;
-      const { tuval, genislik, yukseklik } = await sayfaCiz(kaynakBelge, no, { olcek: dpi / 72 });
-      const sayfaPt = { w: genislik / (dpi / 72), h: yukseklik / (dpi / 72) };
+      const yaziSiz = mod === 'duzenlenebilir' && yaziliSayfa && !!yaziSizBayt;
+      const { tuval, genislik, yukseklik } = await sayfaCiz(yaziSiz ? await al('yazisiz') : b, no, { olcek: dpi / 72 });
       const png = await tuvaliBayta(tuval, 'png');
+      ilerleme?.(++biten, secili.length, `Sayfa ${no} işleniyor…`);
+      return { sayfaOzet, yaziSiz, genislik, yukseklik, png };
+    }, { ilkBelge: belge, sinir: 4 });
+    for (let k = 0; k < secili.length; k++) {
+      const { sayfaOzet, yaziSiz, genislik, yukseklik, png } = gorseller[k];
+      const sayfaPt = { w: genislik / (dpi / 72), h: yukseklik / (dpi / 72) };
       const olcek = Math.min((W * 72) / sayfaPt.w, (H * 72) / sayfaPt.h);
       if (Math.abs(olcek - 1) > 0.01) farkliBoyut++;
       const ox = (W - (sayfaPt.w * olcek) / 72) / 2, oy = (H - (sayfaPt.h * olcek) / 72) / 2;
       const slayt = pptx.addSlide();
       slayt.addImage({ data: `image/png;base64,${base64(png)}`, x: ox, y: oy, w: (sayfaPt.w * olcek) / 72, h: (sayfaPt.h * olcek) / 72 });
-      if (kaynakBelge === yaziSizBelge) {
+      if (yaziSiz) {
         for (const l of sayfaOzet.satirlar) {
           const metin = String(l.metin ?? '').trim();
           if (!metin) continue;
@@ -92,6 +97,5 @@ export async function pdfdenPowerPoint(bayt, { sayfalar = '', mod = 'duzenlenebi
     return { bayt: cikti, uyarilar, bilgi: { slayt: secili.length, metinKutusu, resimSlayt } };
   } finally {
     await belge.kapat();
-    await yaziSizBelge?.kapat?.();
   }
 }

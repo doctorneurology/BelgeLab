@@ -67,6 +67,7 @@ export async function topluIsle(dosyalar, islem, {
       if (dosyaBitti && adli.length) { try { await dosyaBitti(d, adli); } catch { /* kaydetme hatası işlemi durdurmaz */ } }
       if (bekleyenBoyut >= parcaSiniri) zipYaz();
     } catch (e) {
+      if (e?.name === 'IptalHatasi') { iptal = true; break; } // dosyanın ortasında iptal: yarım dosya çıktıya eklenmez
       sonuclar.push({ ad: d.ad, ok: false, neden: hataMetni(e) });
     }
   }

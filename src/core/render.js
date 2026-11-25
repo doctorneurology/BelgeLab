@@ -3,7 +3,7 @@
 //   renderOrtamiAyarla({ pdfjs, tuvalOlustur(w,h), tuvaliBayta(tuval, bicim, kalite), belgeSecenekleri })
 
 import { PdfHatasi, SifreliPdfHatasi, YanlisSifreHatasi } from './hatalar.js';
-import { sayfaSecimi, dosyaAdiTuret } from './util.js';
+import { sayfaSecimi, dosyaAdiTuret, eszamanliCalistir } from './util.js';
 
 let ORTAM = null;
 export function renderOrtamiAyarla(o) {
@@ -15,7 +15,7 @@ function ortam() {
 }
 
 /** pdf.js ile belgeyi açar. Şifreliyse SifreliPdfHatasi / YanlisSifreHatasi fırlatır. */
-export async function belgeAc(bayt, { sifre, ek = {} } = {}) {
+export async function belgeAc(bayt, { sifre, ek = {}, isciNo = 0 } = {}) {
   const { pdfjs, belgeSecenekleri } = ortam();
   const gorev = pdfjs.getDocument({
     data: bayt.slice(), // pdf.js diziyi devralabilir; özgün veriyi koru
@@ -23,7 +23,7 @@ export async function belgeAc(bayt, { sifre, ek = {} } = {}) {
     isEvalSupported: false,
     verbosity: 0,
     ...belgeSecenekleri,
-    ...(ortam().isci ? { worker: ortam().isci() } : {}), // tarayıcıda tek ortak işçi: yüzlerce belgede her seferinde yeni işçi başlatılmaz
+    ...(ortam().isci ? { worker: ortam().isci(isciNo) } : {}), // tarayıcıda tek ortak işçi: yüzlerce belgede her seferinde yeni işçi başlatılmaz
     ...ek, // ör. { fontExtraProperties: true } → gerçek yazı tipi adları
   });
   try {
@@ -67,6 +67,51 @@ export async function sayfaCiz(belge, sayfaNo, { olcek = 1, arkaPlan = '#ffffff'
   return { tuval, genislik, yukseklik };
 }
 
+/** Bu cihazda aynı anda kaç PDF okuyucu (ayrı işçi) kullanılsın; büyük dosyada bellek için azaltılır. */
+export function okuyucuSayisi(baytBoyutu = 0, istenen = 4) {
+  const cekirdek = globalThis.navigator?.hardwareConcurrency ?? 4;
+  const bellek = globalThis.navigator?.deviceMemory ?? 8;
+  let n = Math.min(istenen, Math.max(1, cekirdek - 1), bellek <= 4 ? 2 : 8);
+  if (baytBoyutu > 150e6) n = Math.min(n, 2);
+  else if (baytBoyutu > 60e6) n = Math.min(n, 3);
+  return Math.max(1, n);
+}
+
+/**
+ * Sayfaları BİRDEN ÇOK ayrı PDF okuyucuyla (her biri kendi işçisinde) aynı anda işler; sonuçlar sayfa sırasıyla döner.
+ * Tek işçi darboğazı kalkar: pdf.js çözümleme, farklı çekirdeklerde paralel yürür.
+ * @param kaynaklar  Uint8Array ya da { ana: bayt, ... }  (her kulvar gereken kaynağı kendi belgesiyle açar)
+ * @param islem      async (belge, sayfaNo, sira, belgeAl) — belgeAl(ad) aynı kulvarın başka kaynağını verir
+ * @param secenek.ilkBelge  zaten açık bir "ana" belge varsa 0. kulvar onu kullanır (kapatmayı çağıran yapar)
+ * @param secenek.sinir     eşzamanlı sayfa (kulvar) sayısı; belge sayısı da bu kadar (en çok)
+ */
+export async function paralelSayfalar(kaynaklar, sayfaNolari, islem, { ilkBelge = null, sinir = 4, belgeSecenek = {}, baytBoyutu = 0 } = {}) {
+  const kay = kaynaklar instanceof Uint8Array ? { ana: kaynaklar } : kaynaklar;
+  const boyut = Math.max(...Object.values(kay).map((b) => b.length), baytBoyutu);
+  const kulvar = Math.max(1, Math.min(sinir, sayfaNolari.length, okuyucuSayisi(boyut, sinir)));
+  const acik = []; // kulvar → { ad → söz }
+  const belgeAlCikar = (yuva) => (ad = 'ana') => {
+    acik[yuva] ??= {};
+    if (!acik[yuva][ad]) {
+      acik[yuva][ad] = (yuva === 0 && ad === 'ana' && ilkBelge) ? Promise.resolve(ilkBelge) : belgeAc(kay[ad], { ...belgeSecenek, isciNo: yuva });
+    }
+    return acik[yuva][ad];
+  };
+  const alicilar = Array.from({ length: kulvar }, (_, y) => belgeAlCikar(y));
+  const sonuc = new Array(sayfaNolari.length);
+  try {
+    await eszamanliCalistir(sayfaNolari.length, kulvar, async (i, yuva) => {
+      const al = alicilar[yuva];
+      sonuc[i] = await islem(await al('ana'), sayfaNolari[i], i, al);
+    });
+  } finally {
+    await Promise.allSettled(acik.flatMap((o, y) => Object.entries(o ?? {})
+      .filter(([ad]) => !(y === 0 && ad === 'ana' && ilkBelge))
+      .map(async ([, soz]) => (await soz).kapat?.())));
+  }
+  return sonuc;
+}
+
 /**
  * Seçilen sayfaları PNG/JPEG olarak üretir.
  * @returns {{dosyalar:{ad,bayt,genislik,yukseklik,sayfa}[], uyarilar:string[]}}
@@ -79,17 +124,16 @@ export async function pdfdenResimler(bayt, dosyaAdi, { sayfalar = '', dpi = 150,
   try {
     const secili = sayfaSecimi(sayfalar, belge.numPages);
     const hane = String(belge.numPages).length;
-    const dosyalar = [];
-    for (let k = 0; k < secili.length; k++) {
-      const no = secili[k] + 1;
-      const { tuval, genislik, yukseklik } = await sayfaCiz(belge, no, { olcek: dpi / 72, arkaPlan: '#ffffff' });
+    let biten = 0;
+    const dosyalar = await paralelSayfalar(bayt, secili.map((x) => x + 1), async (b, no) => {
+      const { tuval, genislik, yukseklik } = await sayfaCiz(b, no, { olcek: dpi / 72, arkaPlan: '#ffffff' });
       const resimBayt = await o.tuvaliBayta(tuval, bicim, kalite);
-      dosyalar.push({
+      ilerleme?.(++biten, secili.length);
+      return {
         ad: dosyaAdiTuret(dosyaAdi, `-sayfa-${String(no).padStart(hane, '0')}`, bicim === 'jpeg' ? 'jpg' : 'png'),
         bayt: resimBayt, genislik, yukseklik, sayfa: no,
-      });
-      ilerleme?.(k + 1, secili.length);
-    }
+      };
+    }, { ilkBelge: belge, belgeSecenek: { sifre } });
     return { dosyalar, uyarilar: [] };
   } finally {
     await belge.kapat();

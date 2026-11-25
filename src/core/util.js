@@ -1,3 +1,4 @@
+import { iptalKontrol } from './iptal.js';
 import { PdfHatasi } from './hatalar.js';
 
 /**
@@ -115,18 +116,20 @@ export function bayt(n) {
 
 /**
  * 0..n-1 numaralı işleri en çok `sinir` tanesi AYNI ANDA çalışacak şekilde yürütür (sırayla başlatır).
- * İlk hatada kalan işler başlatılmaz ve hata fırlatılır.
+ * islem(k, yuva): yuva = bu işi yürüten "kulvar" numarası (0..sinir-1); her kulvar bir işi bitirmeden yenisine başlamaz,
+ * böylece kulvar başına bir kaynak (ör. ayrı PDF belgesi/işçi) kullanılabilir.
+ * İlk hatada (iptal dahil) kalan işler başlatılmaz ve hata fırlatılır.
  */
 export async function eszamanliCalistir(n, sinir, islem) {
   let siradaki = 0;
   let hata = null;
-  const isci = async () => {
+  const isci = async (yuva) => {
     while (!hata) {
       const k = siradaki++;
       if (k >= n) return;
-      try { await islem(k); } catch (e) { hata ??= e; }
+      try { iptalKontrol(); await islem(k, yuva); } catch (e) { hata ??= e; }
     }
   };
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(sinir, n)) }, isci));
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(sinir, n)) }, (_, yuva) => isci(yuva)));
   if (hata) throw hata;
 }

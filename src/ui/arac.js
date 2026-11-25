@@ -12,6 +12,7 @@ import { belgeAc, sayfaCiz } from '../core/render.js';
 import { resimTuru } from '../core/resim-pdf.js';
 import { zipOlustur } from '../core/zip.js';
 import { topluIsle } from '../core/toplu.js';
+import { iptalIste, iptalSifirla } from '../core/iptal.js';
 import { hafiza, kaliciDepoIste } from '../core/hafiza.js';
 import { alanlariOlustur } from './alanlar.js';
 import { pdfOnizleme } from './onizleme.js';
@@ -284,6 +285,13 @@ export function aracKur(tanim) {
     sonucAlani.replaceChildren();
     hataGoster('');
     urlleriTemizle();
+    // İPTAL: hem tek dosyada hem toplu işlemde çalışan iş GERÇEKTEN durur (sayfa döngüleri ve OCR işçileri dahil).
+    durum.iptal = false;
+    iptalSifirla();
+    const iptalDugmesi = h('button', { type: 'button', class: 'kucuk-dugme tehlike', onclick: () => {
+      durum.iptal = true; iptalDugmesi.disabled = true; iptalDugmesi.textContent = 'İptal ediliyor…'; ilerlemeYazi.textContent = 'Durduruluyor…'; iptalIste();
+    } }, '⛔ İptal et');
+    eylem.append(iptalDugmesi);
     await boyamaBekle();
     try {
       const degerler = ayarlar ? await ayarlar.oku() : {};
@@ -301,8 +309,10 @@ export function aracKur(tanim) {
       }
       sonucuGoster(sonuc);
     } catch (e) {
-      sonucAlani.replaceChildren(kutu('hata', kullaniciMesaji(e)));
+      sonucAlani.replaceChildren(e?.name === 'IptalHatasi' ? kutu('uyari', 'İşlem iptal edildi. Yarım kalan dosya çıktıya eklenmedi.') : kutu('hata', kullaniciMesaji(e)));
+      if (e?.name === 'IptalHatasi') { try { await tanim.topluBitti?.(); } catch { /* önemsiz */ } }
     } finally {
+      iptalDugmesi.remove();
       durum.mesgul = false;
       calistirDugmesi.replaceChildren(eskiMetin);
       ilerlemeYazi.textContent = '';
@@ -318,10 +328,8 @@ export function aracKur(tanim) {
   async function topluCalistir(degerler, ilerlemeYazi) {
     const dosyalar = [...durum.dosyalar];
     const n = dosyalar.length;
-    durum.iptal = false;
-    const iptalDugmesi = h('button', { type: 'button', class: 'kucuk-dugme tehlike', onclick: () => { durum.iptal = true; iptalDugmesi.disabled = true; iptalDugmesi.textContent = 'İptal ediliyor…'; } }, '⛔ İptal et');
     const cubuk = h('progress', { max: n, value: 0, 'aria-label': 'Toplu işlem ilerlemesi', stil: { width: '100%', maxWidth: '420px' } });
-    eylem.append(iptalDugmesi, cubuk);
+    eylem.append(cubuk);
     let t;
     // HAFIZA: her dosyanın çıktısı biter bitmez tarayıcı deposuna yazılır; sayfa ortada kapanırsa o ana kadarki işler kurtarılır.
     let kayit = null, hafizaHata = null;
@@ -340,7 +348,7 @@ export function aracKur(tanim) {
         ilerleme: async (i, toplam, d) => { cubuk.value = i; ilerlemeYazi.textContent = `Dosya ${i + 1} / ${toplam}: ${d.ad}`; await birakVer(); },
       });
     } finally {
-      iptalDugmesi.remove(); cubuk.remove();
+      cubuk.remove();
       try { await tanim.topluBitti?.(); } catch { /* kapatma hatası önemsiz */ }
       if (kayit) { try { await (hafizaHata ? kayit.eksik(hafizaHata.message) : kayit.bitir()); } catch { /* yazılamadı */ } }
     }

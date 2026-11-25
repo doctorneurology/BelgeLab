@@ -53,7 +53,7 @@ function tabloMd(t) {
  */
 export async function pdfdenMarkdown(bayt, {
   sayfalar = '', ocr = 'otomatik', resimler = 'dosya', ustAltAtla = true, sayfaAyirac = false, resimKlasoru = 'resimler',
-  ocrDpi = 250, dil = 'tur', ilerleme,
+  ocrDpi = 200, dil = 'tur', ilerleme,
 } = {}) {
   const Y = await pdfYapisi(bayt, { sayfalar, ocr, resimler: resimler !== 'yok', ustAltAtla, ocrDpi, dil, ilerleme });
   const { nihai, bilgi, uyarilar } = Y;

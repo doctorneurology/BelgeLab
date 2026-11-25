@@ -5,10 +5,10 @@
 // karmaşık düzenlerde (iç içe tablo, metin kutuları, formüller, sayfa düzeni sanatı) sonuç ORİJİNALİN AYNISI olmaz.
 // Burada yapılan her tahmin (sütun, tablo, başlık, birleştirilen tireli kelime…) sonuçta `uyarilar`/`bilgi` içinde bildirilir.
 
-import { belgeAc } from './render.js';
+import { belgeAc, paralelSayfalar } from './render.js';
 import { sayfaTumu } from './sayfa-icerik.js';
 import { sayfaOcr, ocrHavuzBoyutu, ocrOnerilenBoyut } from './ocr.js';
-import { sayfaSecimi, eszamanliCalistir } from './util.js';
+import { sayfaSecimi } from './util.js';
 import { PdfHatasi } from './hatalar.js';
 
 const ORTANCA = (d) => { if (!d.length) return 0; const s = [...d].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
@@ -269,7 +269,7 @@ function ustAltAyikla(sayfalar) {
  * @returns {{bayt:Uint8Array, uyarilar:string[], bilgi:{sayfa,paragraf,baslik,tablo,resim,ocrSayfa,sutunluSayfa}}}
  */
 export async function pdfYapisi(bayt, {
-  sayfalar = '', ocr = 'otomatik', resimler = true, ustAltAtla = true, dil = 'tur', ocrDpi = 250, ilerleme, dosyaAdi = 'belge',
+  sayfalar = '', ocr = 'otomatik', resimler = true, ustAltAtla = true, dil = 'tur', ocrDpi = 200, ilerleme, dosyaAdi = 'belge',
 } = {}) {
   const belge = await belgeAc(bayt, { ek: { fontExtraProperties: true } });
   const uyarilar = [];
@@ -283,8 +283,7 @@ export async function pdfYapisi(bayt, {
     // yazılı sayfalarda pdf.js işçisi ile ana iş parçacığı birbirini beklemez.
     const onbellek = new Map(); // belge boyunca ortak resimler (logo gibi) bir kez PNG'lenir
     let biten = 0;
-    const sayfaIsle = async (k) => {
-      const no = secili[k] + 1;
+    const sayfaIsle = async (belge, no, k) => {
       ilerleme?.(biten, secili.length, `Sayfa ${no} inceleniyor…`);
       const t = await sayfaTumu(belge, no, { resim: resimler, onbellek, taranmisYine: ocr === 'yok' });
       let parcalar, genislik, yukseklik, resimListe = [];
@@ -319,9 +318,9 @@ export async function pdfYapisi(bayt, {
       biten++;
       ilerleme?.(biten, secili.length, `Sayfa ${no} tamam`);
     };
-    // OCR varsa OCR işçisi sayısı kadar, yoksa 3 sayfa birden (pdf.js işçisi ile ana iş parçacığı üst üste binsin)
+    // Her kulvar kendi PDF okuyucusuyla (ayrı işçi) çalışır: OCR varsa OCR işçisi sayısı kadar, yoksa 4 sayfa birden.
     if (ocr !== 'yok') ocrHavuzBoyutu(ocrOnerilenBoyut());
-    await eszamanliCalistir(secili.length, ocr !== 'yok' ? ocrOnerilenBoyut() : 3, sayfaIsle);
+    await paralelSayfalar(bayt, secili.map((x) => x + 1), sayfaIsle, { ilkBelge: belge, sinir: ocr !== 'yok' ? ocrOnerilenBoyut() : 4 });
 
     // Yazı boyutları ve ortak ölçüler (tüm sayfalar birlikte): gövde boyutu = en çok harf kullanılan boyut
     const harfBoyut = new Map();

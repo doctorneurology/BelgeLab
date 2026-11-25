@@ -8,12 +8,13 @@
 // DÜRÜSTLÜK: OCR hata yapar (özellikle bulanık, eğik, lekeli taramalarda). Okunan yazı yalnızca ARAMA için
 // görünmez katman olarak eklenir; belgenin görünen hâline hiçbir zaman otomatik yazı yazılmaz.
 
-import { belgeAc, sayfaCiz, tuvaliBayta, EN_COK_PIKSEL } from './render.js';
+import { belgeAc, sayfaCiz, tuvaliBayta, EN_COK_PIKSEL, paralelSayfalar } from './render.js';
 import { pdfAc, kaydet } from './belge.js';
 import { yeniIslem, SayfaCizici, eklenenleriBul, eklenenleriKaldir } from './cizim.js';
 import { yaziTipiGom, yaziTipiOlcer } from './fonts.js';
 import { PdfHatasi } from './hatalar.js';
-import { sayfaSecimi, eszamanliCalistir } from './util.js';
+import { sayfaSecimi } from './util.js';
+import { iptalKontrol, iptalEdildiMi, iptalDinle, IptalHatasi } from './iptal.js';
 
 let ORTAM = null;
 /**
@@ -37,8 +38,8 @@ const bekleyenler = [];
 export function ocrOnerilenBoyut() {
   const cekirdek = globalThis.navigator?.hardwareConcurrency ?? 4;
   const bellek = globalThis.navigator?.deviceMemory ?? 8; // GB; bilinmiyorsa 8 varsay
-  const ust = bellek >= 8 ? 6 : bellek > 4 ? 4 : 2;
-  return Math.max(1, Math.min(ust, Math.floor(cekirdek / 2)));
+  const ust = bellek >= 8 ? 8 : bellek > 4 ? 4 : 2;
+  return Math.max(1, Math.min(ust, Math.floor(cekirdek * 0.6)));
 }
 /** En çok kaç OCR işçisi açılacağını ayarlar (açık olanlar kapatılmaz). */
 export function ocrHavuzBoyutu(n) {
@@ -54,18 +55,24 @@ async function isciOlustur(dil) {
 /** Boşta bir işçi verir (gerekirse yeni açar, yoksa sıra bekler). Mutlaka isciBirak çağrılmalı. */
 async function isciAl(dil) {
   if (!ORTAM) throw new PdfHatasi('OCR bileşeni hazır değil.');
+  iptalKontrol();
   if (havuzDili !== null && havuzDili !== dil) await ocrKapat();
   havuzDili = dil;
   for (;;) {
+    iptalKontrol();
     const bos = havuz.find((i) => !i.mesgul);
     if (bos) { bos.mesgul = true; return bos; }
     if (havuz.length + olusturuluyor < hedefBoyut) {
       olusturuluyor++;
       try {
-        const kayit = { w: await isciOlustur(dil), mesgul: true };
+        const yeniIsci = await isciOlustur(dil);
+        if (iptalEdildiMi()) { try { await yeniIsci.terminate(); } catch { /* kapalı */ } throw new IptalHatasi(); }
+        const kayit = { w: yeniIsci, mesgul: true };
         havuz.push(kayit);
         return kayit;
       } catch (e) {
+        if (e?.name === 'IptalHatasi') throw e;
+        if (iptalEdildiMi()) throw new IptalHatasi();
         if (!havuz.length) throw new PdfHatasi(`OCR başlatılamadı: ${e?.message ?? e}`, 'OCR');
         // Başka işçi zaten çalışıyor: yeni açılamadıysa onların boşalmasını bekle.
         hedefBoyut = Math.max(1, havuz.length);
@@ -80,6 +87,9 @@ function isciBirak(kayit) {
   const siradaki = bekleyenler.shift();
   if (siradaki) siradaki();
 }
+
+// İptal edilince çalışan OCR işçileri hemen kapatılır (sayfa okuması beklenmez).
+iptalDinle(() => { ocrKapat(); });
 
 /** Tüm OCR işçilerini kapatır (bellek serbest kalır). */
 export async function ocrKapat() {
@@ -99,13 +109,19 @@ export async function goruntuOcr(png, { dil = 'tur', sayfaBolme } = {}) {
   const kayit = await isciAl(dil);
   const w = kayit.w;
   let sonuc;
+  // İptalde işçi kapatılınca bekleyen recognize hiç dönmeyebilir; bu yüzden iptal sözüyle yarıştırılır.
+  let iptalKaldir = () => {};
+  const iptalSozu = new Promise((_, red) => { iptalKaldir = iptalDinle(() => red(new IptalHatasi())); });
+  iptalSozu.catch(() => {});
   try {
     if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: String(sayfaBolme) });
-    sonuc = await w.recognize(png, {}, { blocks: true, text: true });
+    sonuc = await Promise.race([w.recognize(png, {}, { blocks: true, text: true }), iptalSozu]);
   } catch (e) {
+    if (iptalEdildiMi()) throw new IptalHatasi(); // iptalde işçiler kapatıldığı için hata normaldir
     throw new PdfHatasi(`OCR çalışırken hata oluştu: ${e?.message ?? e}`, 'OCR');
   } finally {
-    try { if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: '3' }); } catch { /* işçi kapanmış olabilir */ }
+    iptalKaldir();
+    if (!iptalEdildiMi()) { try { if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: '3' }); } catch { /* işçi kapanmış olabilir */ } }
     isciBirak(kayit);
   }
   const veri = sonuc.data;
@@ -216,8 +232,7 @@ export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yazi
     const sonuclar = new Array(secili.length);
     let biten = 0;
     ocrHavuzBoyutu(ocrOnerilenBoyut());
-    await eszamanliCalistir(secili.length, ocrOnerilenBoyut(), async (k) => {
-      const no = secili[k] + 1;
+    await paralelSayfalar(bayt, secili.map((x) => x + 1), async (belge, no, k) => {
       ilerleme?.(biten, secili.length, `Sayfa ${no} okunuyor…`);
       if (yaziVarsa === 'atla' && await sayfadaYaziVarMi(belge, no)) {
         sonuclar[k] = { rapor: { no, durum: 'atlandi', kelime: 0, guven: null, dusukGuven: 0 } };
@@ -229,7 +244,7 @@ export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yazi
       }
       biten++;
       ilerleme?.(biten, secili.length, `Sayfa ${no} tamam`);
-    });
+    }, { ilkBelge: belge, sinir: ocrOnerilenBoyut() });
     const rapor = sonuclar.map((x) => x.rapor);
     const katman = sonuclar.filter((x) => x.katman).map((x) => x.katman);
     ilerleme?.(secili.length, secili.length, 'Yazı katmanı ekleniyor…');

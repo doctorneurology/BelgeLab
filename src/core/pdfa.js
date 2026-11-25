@@ -7,7 +7,7 @@
 // resme çevirdiği için dosya büyür ve orijinal yazı tipleri/vektörler kaybolur (yazı aranabilir katman olarak korunur).
 
 import { PDFDocument, PDFName, PDFDict, PDFArray, PDFRef, PDFStream, PDFHexString, PDFString, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
-import { belgeAc } from './render.js';
+import { belgeAc, paralelSayfalar } from './render.js';
 import { pdfAc, URETICI } from './belge.js';
 import { sayfayiResmeCevir, sayfaYaziKutulari } from './sayfa-resim.js';
 import { gorunmezKatmanEkle } from './ocr.js';
@@ -142,10 +142,17 @@ export async function pdfaDonustur(bayt, { dpi = 200, bicim = 'jpeg', kalite = 0
     const cikis = await PDFDocument.create();
     const n = belge.numPages;
     let yaziliSayfa = 0;
+    // Sayfa görüntüleri birden çok PDF okuyucuyla aynı anda üretilir; sayfalar sonra sırayla eklenir.
+    let biten = 0;
+    const sayfalar = await paralelSayfalar(bayt, Array.from({ length: n }, (_, k) => k + 1), async (b, i) => {
+      const parcalar = await sayfaYaziKutulari(b, i);
+      const r = await sayfayiResmeCevir(b, i, { dpi, bicim, kalite });
+      ilerleme?.(++biten, n, `Sayfa ${i} dönüştürüldü`);
+      return { parcalar, r };
+    }, { ilkBelge: belge, sinir: 4 });
     for (let i = 1; i <= n; i++) {
-      ilerleme?.(i - 1, n, `Sayfa ${i} dönüştürülüyor…`);
-      const parcalar = await sayfaYaziKutulari(belge, i);
-      const r = await sayfayiResmeCevir(belge, i, { dpi, bicim, kalite });
+      const { parcalar, r } = sayfalar[i - 1];
+      sayfalar[i - 1] = null; // bellek: eklenen sayfanın ham resmi bırakılır
       const resim = bicim === 'png' ? await cikis.embedPng(r.bayt) : await cikis.embedJpg(r.bayt);
       const p = cikis.addPage([r.genislik, r.yukseklik]);
       p.drawImage(resim, { x: 0, y: 0, width: r.genislik, height: r.yukseklik });

@@ -27,7 +27,7 @@ export function sayiyaCevir(metin, { ondalik = 'tr' } = {}) {
  * @param secenek.ondalik    'tr' (1.234,5) | 'en' (1,234.5)
  */
 export async function pdfdenExcel(bayt, {
-  sayfalar = '', ocr = 'otomatik', duzen = 'sayfa', tabloDisi = false, sayilar = true, ondalik = 'tr', ocrDpi = 250, dil = 'tur', ilerleme,
+  sayfalar = '', ocr = 'otomatik', duzen = 'sayfa', tabloDisi = false, sayilar = true, ondalik = 'tr', ocrDpi = 200, dil = 'tur', ilerleme,
 } = {}) {
   const { nihai, bilgi } = await pdfYapisi(bayt, { sayfalar, ocr, resimler: false, ustAltAtla: false, ocrDpi, dil, ilerleme });
   const deger = (m) => (sayilar ? sayiyaCevir(m, { ondalik }) : m);
