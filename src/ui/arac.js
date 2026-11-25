@@ -21,6 +21,7 @@ import { resimiPngYap } from './resim-yardim.js';
 // PDF/resim dışındaki dosya türleri (kabul listesi, uzantı denetimi, simge)
 const DOSYA_TURLERI = {
   excel: { kabul: '.xlsx,.xls,.xlsm', re: /.(xlsx|xls|xlsm)$/i, ad: 'Excel dosyası (.xlsx / .xls)', ikon: '📊' },
+  tablo: { kabul: '.xlsx,.xls,.xlsm,.csv,.tsv,.txt', re: /.(xlsx|xls|xlsm|csv|tsv|txt)$/i, ad: 'Excel ya da CSV dosyası', ikon: '📊' },
   word: { kabul: '.docx', re: /.docx$/i, ad: 'Word dosyası (.docx)', ikon: '📝' },
   sunum: { kabul: '.pptx', re: /.pptx$/i, ad: 'PowerPoint dosyası (.pptx)', ikon: '📽️' },
   html: { kabul: '.html,.htm,.xhtml,.txt', re: /.(html?|xhtml|txt)$/i, ad: 'HTML dosyası (.html / .htm / .txt)', ikon: '🌐' },

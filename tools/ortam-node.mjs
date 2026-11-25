@@ -30,7 +30,7 @@ export function nodeOrtaminiKur() {
       return { genislik: im.width, yukseklik: im.height, cizilebilir: im };
     },
     tuvaliBayta: async (tuval, bicim, kalite) => {
-      const b = bicim === 'jpeg' ? await tuval.encode('jpeg', Math.round(kalite * 100)) : await tuval.encode('png');
+      const b = bicim === 'jpeg' ? await tuval.encode('jpeg', Math.round(kalite * 100)) : bicim === 'webp' ? await tuval.encode('webp', Math.round(kalite * 100)) : await tuval.encode('png');
       return new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
     },
     belgeSecenekleri: {

@@ -5,6 +5,7 @@ import { PDFDocument, degrees } from 'pdf-lib';
 import { PdfHatasi, SifreliPdfHatasi } from './hatalar.js';
 import { pdfAc, kaydet, belgeOzellikleri, ozellikUyarilari } from './belge.js';
 import { sayfaAraligiCoz, sayfaSecimi, dosyaAdiTuret } from './util.js';
+import { yerimleriOku } from './yer-imi.js';
 
 function aciNormal(a) {
   const n = ((Math.round(a) % 360) + 360) % 360;
@@ -60,7 +61,34 @@ export async function bol(bayt, dosyaAdi, secenek) {
   const n = kaynak.getPageCount();
   const uyarilar = ozellikUyarilari(belgeOzellikleri(kaynak), 'yeniBelge');
   let gruplar;
-  if (secenek.mod === 'tek') {
+  let basliklar = null; // yer imine göre bölmede her parçanın adı
+  if (secenek.mod === 'boyut') {
+    // Her parça, kaydedilmiş boyutu hedefi AŞMAYACAK en çok sayfayı alır (üstel artırma + ikili arama; gerçek boyut ölçülür).
+    const limit = Number(secenek.hedefMB) * 1024 * 1024;
+    if (!(limit >= 1024)) throw new PdfHatasi('Hedef boyut en az 0,001 MB olmalı.');
+    const boyutu = async (a, b) => (await kaydet(await yeniBelgeOlustur(kaynak, Array.from({ length: b - a }, (_, j) => ({ indeks: a + j }))))).length;
+    gruplar = [];
+    let bas = 0;
+    while (bas < n) {
+      let ok = 1, kalan = n - bas, kotu = null;
+      while (ok < kalan) { const t = Math.min(kalan, ok * 2); if ((await boyutu(bas, bas + t)) <= limit) ok = t; else { kotu = t; break; } }
+      if (kotu !== null) { let lo = ok, hi = kotu; while (hi - lo > 1) { const m = (lo + hi) >> 1; if ((await boyutu(bas, bas + m)) <= limit) lo = m; else hi = m; } ok = lo; }
+      gruplar.push(Array.from({ length: ok }, (_, j) => bas + j));
+      bas += ok;
+    }
+    if (gruplar.some((g) => g.length === 1)) uyarilar.push('Bazı tek sayfalar hedef boyuttan büyük olabilir; onlar tek başına bir dosya oldu.');
+  } else if (secenek.mod === 'yerimi') {
+    const duzey = Math.max(1, Math.floor(Number(secenek.duzey) || 1));
+    const yer = (await yerimleriOku(bayt)).filter((y) => y.sayfa != null && y.duzey <= duzey);
+    if (!yer.length) throw new PdfHatasi('Bu belgede (seçilen düzeyde) yer imi bulunamadı.');
+    const baslar = [...new Map(yer.sort((a, b) => a.sayfa - b.sayfa).map((y) => [y.sayfa, y])).values()];
+    gruplar = []; basliklar = [];
+    if (baslar[0].sayfa > 0) { gruplar.push(Array.from({ length: baslar[0].sayfa }, (_, j) => j)); basliklar.push('giris'); }
+    baslar.forEach((y, k) => {
+      const son = k + 1 < baslar.length ? baslar[k + 1].sayfa : n;
+      if (son > y.sayfa) { gruplar.push(Array.from({ length: son - y.sayfa }, (_, j) => y.sayfa + j)); basliklar.push(y.baslik); }
+    });
+  } else if (secenek.mod === 'tek') {
     gruplar = Array.from({ length: n }, (_, i) => [i]);
   } else if (secenek.mod === 'her-n') {
     const k = Math.floor(Number(secenek.n));
@@ -79,9 +107,10 @@ export async function bol(bayt, dosyaAdi, secenek) {
   const dosyalar = [];
   for (let g = 0; g < gruplar.length; g++) {
     const doc = await yeniBelgeOlustur(kaynak, gruplar[g].map((indeks) => ({ indeks })));
+    const temizBaslik = basliklar ? String(basliklar[g]).replace(/[\\/:*?"<>|\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
     const etiket = secenek.mod === 'tek'
       ? `-sayfa-${String(gruplar[g][0] + 1).padStart(String(n).length, '0')}`
-      : `-bolum-${String(g + 1).padStart(Math.max(2, hane), '0')}`;
+      : `-bolum-${String(g + 1).padStart(Math.max(2, hane), '0')}${temizBaslik ? ` ${temizBaslik}` : ''}`;
     dosyalar.push({
       ad: dosyaAdiTuret(dosyaAdi, etiket),
       bayt: await kaydet(doc),

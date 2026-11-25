@@ -7,7 +7,7 @@ const main = kabukKur({ anaSayfa: true });
 document.title = SITE_ADI;
 main.classList.add('ana-sayfa');
 main.append(
-  h('div', { class: 'ana-dugmeler' }, ...BOLUMLER.map((b) =>
+  h('div', { class: `ana-dugmeler${BOLUMLER.length > 2 ? ' uc' : ''}` }, ...BOLUMLER.map((b) =>
     h('a', { class: `ana-dugme ana-${b.id}`, href: b.sayfa },
       h('span', { class: 'ana-ikon', 'aria-hidden': 'true' }, b.ikon),
       h('span', { class: 'ana-yazi' }, b.ad)))));

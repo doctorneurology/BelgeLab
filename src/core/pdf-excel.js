@@ -81,5 +81,6 @@ export async function pdfdenExcel(bayt, {
   if (sayilar) uyarilar.push(`Sayıya benzeyen hücreler sayı yapıldı (${ondalik === 'tr' ? '1.234,5 biçimi' : '1,234.5 biçimi'}); baştaki sıfırlı değerler (TC no, telefon) metin kalır.`);
   if (bilgi.ocrSayfa) uyarilar.push(`${bilgi.ocrSayfa} taranmış sayfa OCR ile okundu; okuma hataları olabilir.`);
   if (bilgi.sutunluSayfa) uyarilar.push(`${bilgi.sutunluSayfa} sayfada iki sütunlu metin düzeni algılandı; tablo bulma etkilenmiş olabilir.`);
-  return { bayt: cikti, uyarilar, bilgi: { tablo: tabloSayisi, sayfa: kitap.SheetNames.length, satir: tablolar.reduce((t, x) => t + x.satirlar.length, 0) } };
+  const onizleme = tablolar.filter((t) => t.tablo).slice(0, 15).map((t) => ({ sayfaNo: t.sayfaNo, satirSayisi: t.satirlar.length, kolon: Math.max(...t.satirlar.map((r) => r.length)), ilkSatirlar: t.satirlar.slice(0, 6) }));
+  return { bayt: cikti, uyarilar, onizleme, bilgi: { tablo: tabloSayisi, sayfa: kitap.SheetNames.length, satir: tablolar.reduce((t, x) => t + x.satirlar.length, 0) } };
 }

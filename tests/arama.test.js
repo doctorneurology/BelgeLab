@@ -49,3 +49,17 @@ describe('araç arama', () => {
     expect(araclariAra(ARACLAR, 'zzzqqq')).toEqual([]);
   });
 });
+
+describe('yeni araçlar aranabilir', () => {
+  it('İngilizce ve kısa yazılışlar', () => {
+    expect(ilk('remove duplicates')).toBe('excel-tekrar-sil');
+    expect(ilk('csv to excel')).toBe('excel-csv');
+    expect(ilk('booklet')).toBe('sayfa-duzeni');
+    expect(ilk('metadata')).toBe('ustveri');
+    expect(ilk('bookmarks')).toBe('yer-imi');
+    expect(ilk('pdf to epub')).toBe('pdf-metin');
+    expect(ilk('markdown editor')).toBe('markdown-editor');
+    expect(ilk('compress image')).toBe('resim-araclari');
+    expect(ilk('flatten')).toBe('formu-duzlestir');
+  });
+});

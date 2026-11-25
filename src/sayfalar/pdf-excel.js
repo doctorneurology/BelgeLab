@@ -7,6 +7,16 @@ import { pdfdenExcel } from '../core/pdf-excel.js';
 import { ocrKapat } from '../core/ocr.js';
 import { dosyaAdiTuret } from '../core/util.js';
 
+/** Bulunan tabloların ilk satırları: indirmeden önce doğru tablo mu, sütunlar yerinde mi diye bakılır. */
+function tabloOnizleme(liste = []) {
+  if (!liste.length) return '';
+  return h('details', { class: 'yd-rapor', open: true },
+    h('summary', {}, 'Bulunan tablolar (önizleme — indirmeden önce kontrol edin)'),
+    ...liste.map((t, i) => h('div', { class: 'tablo-kap' },
+      h('p', { class: 'soluk' }, 'Tablo ' + (i + 1) + ' — sayfa ' + t.sayfaNo + ' · ' + t.satirSayisi + ' satır × ' + t.kolon + ' sütun' + (t.satirSayisi > t.ilkSatirlar.length ? ' (ilk ' + t.ilkSatirlar.length + ' satır)' : '')),
+      h('table', { class: 'yd-tablo' }, h('tbody', {}, ...t.ilkSatirlar.map((r) => h('tr', {}, ...Array.from({ length: t.kolon }, (_, k) => h('td', {}, String(r[k] ?? ''))))))))));
+}
+
 aracKur({
   slug: 'pdf-excel',
   topluBitti: () => ocrKapat(), // toplu kipte OCR motoru bir kez açılır, en sonda kapatılır
@@ -36,7 +46,7 @@ aracKur({
         ciktilar: [{ ad: dosyaAdiTuret(d.ad, '', 'xlsx'), bayt: r.bayt }],
         mesaj: `${r.bilgi.tablo} tablo bulundu: ${r.bilgi.sayfa} Excel sayfası, ${r.bilgi.satir} satır.`,
         uyarilar: r.uyarilar,
-        ekler: [hizliGecis('Hızlı geçiş', ['pdf-word', 'pdf-markdown', 'excel-analiz'])],
+        ekler: [tabloOnizleme(r.onizleme), hizliGecis('Hızlı geçiş', ['pdf-word', 'pdf-markdown', 'excel-analiz'])],
       };
     } finally { if (!toplu) await ocrKapat(); }
   },

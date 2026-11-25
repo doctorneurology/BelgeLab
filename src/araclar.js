@@ -4,6 +4,7 @@
 export const BOLUMLER = [
   { id: 'pdf', ad: 'PDF düzenleme', ikon: '📄', sayfa: 'pdf.html', kisa: 'PDF araçları' },
   { id: 'excel', ad: 'Excel düzenleme', ikon: '📊', sayfa: 'excel.html', kisa: 'Excel araçları' },
+  { id: 'diger', ad: 'Resim ve metin', ikon: '🧰', sayfa: 'diger.html', kisa: 'Markdown/HTML editörü ve resim araçları' },
 ];
 
 export const GRUPLAR = [
@@ -13,7 +14,9 @@ export const GRUPLAR = [
   { id: 'pdfe', ad: 'PDF’e dönüştür', aciklama: 'Word, PowerPoint, Excel, HTML, resim, tarama' },
   { id: 'pdften', ad: 'PDF’ten dönüştür', aciklama: 'Word, PowerPoint, Excel, Markdown, resim, PDF/A' },
   { id: 'guvenlik', ad: 'Güvenlik ve karşılaştırma', aciklama: 'Gerçek karartma, şifre, PDF karşılaştırma' },
-  { id: 'excel', ad: 'Excel', aciklama: 'Excel dosyalarını birleştir ve hasta başvuru analizi yap', bolum: 'excel' },
+  { id: 'excel', ad: 'Excel', aciklama: 'Birleştir, analiz et, CSV’ye çevir, yinelenenleri sil', bolum: 'excel' },
+  { id: 'metin', ad: 'Metin editörü', aciklama: 'Markdown / HTML yaz; PDF, Word, HTML olarak indir', bolum: 'diger' },
+  { id: 'resim', ad: 'Resim araçları', aciklama: 'Boyutlandır, sıkıştır, JPG/PNG/WebP dönüştür', bolum: 'diger' },
 ];
 
 export const ARACLAR = [
@@ -56,6 +59,21 @@ export const ARACLAR = [
   { slug: 'karsilastir', grup: 'guvenlik', ikon: '🔍', ad: 'PDF karşılaştır', kisa: 'İki PDF sürümünü yan yana karşılaştır: değişen yazı ve görüntü.' },
   { slug: 'excel-birlestir', grup: 'excel', ikon: '🧮', ad: 'Excel birleştir', kisa: 'Birkaç Excel dosyasını tek dosyada topla (üst bilgi satırları atılır).' },
   { slug: 'excel-analiz', grup: 'excel', ikon: '📈', ad: 'Hasta başvuru analizi', kisa: 'TC, ad soyad ve başvuru no sütunlarını otomatik bul; kişileri say, dosyalar arası çapraz varlığı göster.' },
+  { slug: 'bos-sayfa', grup: 'duzenle', ikon: '🧹', ad: 'Boş sayfaları sil / böl', kisa: 'Boş sayfaları bul ve sil, ya da boş sayfalardan keserek böl.' },
+  { slug: 'yer-imi', grup: 'duzenle', ikon: '🔖', ad: 'Yer imleri (içindekiler)', kisa: 'Yer imlerini gör, düzenle, başlıklardan otomatik üret ya da sil.' },
+  { slug: 'sayfa-duzeni', grup: 'duzenle', ikon: '📚', ad: 'Sayfa düzeni (kâğıt başına çok sayfa, kitapçık)', kisa: 'Bir kâğıda 2-16 sayfa, kitapçık sıralaması ya da tek uzun sayfa.' },
+  { slug: 'sayfa-boyutu', grup: 'duzenle', ikon: '📏', ad: 'Sayfa boyutu / ölçek', kisa: 'Sayfaları A4, A5, Letter, özel boyuta ya da yüzdeye göre ölçekle.' },
+  { slug: 'aciklama-kaldir', grup: 'duzenle', ikon: '🧼', ad: 'Açıklamaları kaldır', kisa: 'Not, vurgu, çizim, bağlantı gibi açıklamaları sil.' },
+  { slug: 'resim-kaldir', grup: 'duzenle', ikon: '🚫', ad: 'Resimleri kaldır', kisa: 'Sayfalardaki resimleri sil; yazı kalır, dosya küçülür.' },
+  { slug: 'otomatik-adlandir', grup: 'duzenle', ikon: '🏷️', ad: 'Başlığa göre yeniden adlandır', kisa: 'Dosya adını belgenin başlığından üret (toplu işte çok pratik).' },
+  { slug: 'formu-duzlestir', grup: 'ekle', ikon: '📋', ad: 'Formu düzleştir', kisa: 'Doldurulmuş form alanlarını sayfaya kalıcı yazı olarak işle.' },
+  { slug: 'ust-uste', grup: 'ekle', ikon: '🗂️', ad: 'Üst üste bindir (antetli kâğıt)', kisa: 'Bir PDF’i başka bir PDF’in üstüne ya da arkasına koy.' },
+  { slug: 'ustveri', grup: 'guvenlik', ikon: '🕵️', ad: 'Üstveri ve gizli bilgi', kisa: 'Yazar, program, JavaScript, gömülü dosya gibi gizli bilgileri gör ve temizle.' },
+  { slug: 'pdf-metin', grup: 'pdften', ikon: '📃', ad: 'PDF → TXT / HTML / EPUB', kisa: 'PDF’i düz metne, web sayfasına ya da e-kitaba çevir. Sayfa sınırı yok.' },
+  { slug: 'excel-csv', grup: 'excel', ikon: '🔁', ad: 'CSV ↔ Excel', kisa: 'Excel’i CSV’ye, CSV’yi Excel’e çevir (Türkçe karakter ve ayırıcı uyumlu).' },
+  { slug: 'excel-tekrar-sil', grup: 'excel', ikon: '🧽', ad: 'Yinelenenleri sil', kisa: 'Tekrar eden satırları seçtiğin sütunlara göre sil.' },
+  { slug: 'markdown-editor', grup: 'metin', ikon: '✍️', ad: 'Markdown / HTML editörü', kisa: 'Canlı önizlemeli editör; PDF, Word ve HTML olarak indir. Taslak otomatik saklanır.' },
+  { slug: 'resim-araclari', grup: 'resim', ikon: '🖼️', ad: 'Resim boyutlandır / sıkıştır / dönüştür', kisa: 'JPG, PNG, WebP: boyut, kalite ve biçim değiştir; toplu çalışır.' },
 ];
 
 export const grupBolumu = (g) => g.bolum ?? 'pdf';

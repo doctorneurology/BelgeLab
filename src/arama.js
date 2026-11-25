@@ -53,6 +53,21 @@ const ALIASLAR = {
   karsilastir: 'compare|diff',
   'excel-birlestir': 'merge|excel|combine|xls|xlsx',
   'excel-analiz': 'patient|application|analysis|hasta|basvuru',
+  'bos-sayfa': 'blank pages|remove blank|empty pages|bos sayfa sil',
+  'yer-imi': 'bookmarks|outline|table of contents|toc|icindekiler',
+  'sayfa-duzeni': 'n-up|nup|booklet|kitapcik|multiple pages per sheet|one long page|tek sayfa',
+  'sayfa-boyutu': 'resize pages|scale pages|page size|a4|ölçek|olcek',
+  'aciklama-kaldir': 'remove annotations|remove comments|remove highlights',
+  'resim-kaldir': 'remove images|strip images',
+  'otomatik-adlandir': 'auto rename|rename by title|rename',
+  'formu-duzlestir': 'flatten form|flatten',
+  'ust-uste': 'overlay|letterhead|stamp pdf|watermark pdf',
+  ustveri: 'metadata|sanitize|clean metadata|remove javascript|privacy|gizlilik',
+  'pdf-metin': 'pdf to txt|pdf to text|pdf to html|pdf to epub|ebook',
+  'excel-csv': 'csv to excel|csv to xlsx|excel to csv|xlsx to csv|csv',
+  'excel-tekrar-sil': 'remove duplicates|dedupe|duplicates|tekrar',
+  'markdown-editor': 'markdown editor|md editor|html editor|md to pdf|md to word|markdown to pdf|markdown to docx',
+  'resim-araclari': 'resize image|compress image|jpg to png|png to jpg|webp|image converter|image tools|foto',
 };
 
 /** Bir sözcük dizisinde (sadeleşmiş) sorgu harfleri sırayla geçiyor mu? Geçiyorsa kapladığı genişliği verir. */

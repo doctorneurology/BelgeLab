@@ -38,11 +38,11 @@ renderOrtamiAyarla({
   },
   tuvaliBayta: async (tuval, bicim, kalite) => {
     // PNG: tuval.toBlob çok yavaş ve ana iş parçacığını tutar; hızlı yazıcı (sıkıştırma ayrı işçide) kullanılır.
-    if (bicim !== 'jpeg') { try { return await tuvaldenPng(tuval); } catch { /* bellek/destek sorunu: tarayıcı kodlayıcısına dön */ } }
+    if (bicim === 'png') { try { return await tuvaldenPng(tuval); } catch { /* bellek/destek sorunu: tarayıcı kodlayıcısına dön */ } }
     return new Promise((coz, red) => {
       tuval.toBlob(
         async (b) => (b ? coz(new Uint8Array(await b.arrayBuffer())) : red(new Error('Resim üretilemedi (sayfa çok büyük olabilir).'))),
-        bicim === 'jpeg' ? 'image/jpeg' : 'image/png',
+        bicim === 'jpeg' ? 'image/jpeg' : bicim === 'webp' ? 'image/webp' : 'image/png',
         kalite,
       );
     });
