@@ -7,6 +7,7 @@ import { sayfayiCiz } from '../ui/onizleme.js';
 import { yaziAnalizEt, yaziDuzelt } from '../core/yazi/motor.js';
 import { dogrula } from '../core/yazi/dogrulama.js';
 import { SINIR } from '../core/yazi/analiz.js';
+import { bulEslesmeler } from '../core/yazi/bul.js';
 import { YAZI_AILELERI, yaziTipiOlcer } from '../core/fonts.js';
 import { dosyaAdiTuret, sayfaSecimi } from '../core/util.js';
 import { PdfHatasi } from '../core/hatalar.js';
@@ -26,6 +27,7 @@ aracKur({
   notlar: [kutu('bilgi', h('span', {},
     'Sayfanın kendisi (boyut, kenar boşlukları, logo, çizgiler, arka plan, imza ve form alanları, bağlantılar) değişmez. ',
     'Yalnızca yazılar, orijinal yazı tipinin ölçü uyumlu açık karşılığıyla aynı yerlerine yeniden yazılır. ',
+    h('b', {}, 'Belgenin TÜM sayfalarındaki yazılar aynı yazı tipi ailesiyle yeniden yazılır'), ' (yalnızca değiştirdiğiniz kelime farklı görünmez; belge baştan üretilmiş gibi tutarlı olur). Çok uzun belgelerde (2000+ sayfa) yalnızca seçtiğiniz sayfa aralığı yeniden yazılır. ',
     'Belge taranmış (resim) ise bu araç çalışmaz; aşağıdaki “Taranmış belgede yazı düzelt” aracını kullanın.')),
   hizliGecis('Yardımcı araçlar', ['taranmis-duzelt', 'ocr', 'pdf-word', 'sikistir', 'karart', 'sayfa-sil', 'sayfa-sirala', 'sayfa-dondur', 'kirp'],
     '(dosyayı o sayfada yeniden seçersiniz; dosyalarınız hiçbir yere gönderilmez)')],
@@ -54,7 +56,64 @@ aracKur({
     const sahne = h('div', { class: 'sahne-kap yd-sahne' });
     const panel = h('div', { class: 'yd-panel', hidden: true });
     const liste = h('div', { class: 'yd-liste' });
-    el.append(durumAlani, aralikAlani, fontAlani, lejant, gezgin, h('div', { class: 'sahne-orta' }, sahne), panel, liste);
+    // ---- Geri al / yinele (değişiklik listesi üzerinde) ---------------------------------------------
+    const gecmis = { geri: [], ileri: [] };
+    const anlik = () => JSON.stringify(st.degisiklikler);
+    const geriDugme = h('button', { type: 'button', class: 'kucuk-dugme', title: 'Geri al (Ctrl+Z)', onclick: () => geriAl() }, '↶ Geri al');
+    const yineleDugme = h('button', { type: 'button', class: 'kucuk-dugme', title: 'Yinele (Ctrl+Y)', onclick: () => yinele() }, '↷ Yinele');
+    const gecmisDurum = () => { geriDugme.disabled = !gecmis.geri.length; yineleDugme.disabled = !gecmis.ileri.length; };
+    function yenile() { kutulariCiz(); listeyiGoster(); gecmisDurum(); if (st.secili && satirBul(st.secili)) sec(st.secili); else panel.hidden = true; }
+    /** Değişiklik listesini değiştiren her işlem buradan geçer; böylece geri alınabilir. */
+    function degistir(islem) { gecmis.geri.push(anlik()); if (gecmis.geri.length > 200) gecmis.geri.shift(); gecmis.ileri.length = 0; islem(); yenile(); }
+    function geriAl() { if (!gecmis.geri.length) return; gecmis.ileri.push(anlik()); st.degisiklikler = JSON.parse(gecmis.geri.pop()); yenile(); }
+    function yinele() { if (!gecmis.ileri.length) return; gecmis.geri.push(anlik()); st.degisiklikler = JSON.parse(gecmis.ileri.pop()); yenile(); }
+    document.addEventListener('keydown', (e) => {
+      if (el.hidden || !(e.ctrlKey || e.metaKey) || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return; // yazı kutusundaki kendi Ctrl+Z'sine dokunma
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); geriAl(); } else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); yinele(); }
+    });
+    gecmisDurum();
+
+    // ---- Bul ve değiştir (tüm belgede) -------------------------------------------------------------
+    const bulGirdi = h('input', { type: 'text', id: 'yd-bul', placeholder: 'Aranacak yazı' });
+    const yerineGirdi = h('input', { type: 'text', id: 'yd-yerine', placeholder: 'Yerine yazılacak (boş = sil)' });
+    const bkOnay = h('input', { type: 'checkbox', id: 'yd-bk' });
+    const tkOnay = h('input', { type: 'checkbox', id: 'yd-tk' });
+    const bulSonuc = h('div', { 'aria-live': 'polite' });
+    function bulGoster() {
+      if (!st.ozet) return;
+      let r;
+      try { r = bulEslesmeler(st.ozet, { ara: bulGirdi.value, yerine: yerineGirdi.value, buyukKucuk: bkOnay.checked, tamKelime: tkOnay.checked, mevcut: st.degisiklikler, kilitAcik: [...st.kilitAcik] }); }
+      catch (e) { bulSonuc.replaceChildren(kutu('uyari', e.message)); return; }
+      if (!r.eslesmeler.length) { bulSonuc.replaceChildren(kutu('bilgi', 'Eşleşme bulunamadı.' + (r.atlanan ? ' (' + r.atlanan + ' satır korumalı olduğu için sayılmadı.)' : ''))); return; }
+      const kutular = r.eslesmeler.map((m) => ({ m, cb: h('input', { type: 'checkbox', checked: true, 'aria-label': 'Sayfa ' + m.sayfa + ' satırını değiştir' }) }));
+      const uygula = h('button', { type: 'button', class: 'birincil', onclick: () => {
+        const secilen = kutular.filter((k) => k.cb.checked).map((k) => k.m);
+        if (!secilen.length) return;
+        degistir(() => { for (const m of secilen) st.degisiklikler[m.id] = { ...(st.degisiklikler[m.id] ?? {}), metin: m.sonra }; });
+        bulSonuc.replaceChildren(kutu('basari', secilen.length + ' satır değişiklik listesine eklendi. Geri almak için “Geri al”a basın; sonra “Düzeltilmiş PDF’i oluştur”.'));
+      } }, 'Seçili ' + r.eslesmeler.length + ' satırı uygula');
+      bulSonuc.replaceChildren(
+        h('p', {}, r.toplam + ' eşleşme, ' + r.eslesmeler.length + ' satırda.' + (r.atlanan ? ' ' + r.atlanan + ' korumalı satır atlanacak.' : '')),
+        h('ul', { class: 'yd-bul-liste' }, ...kutular.map(({ m, cb }) => h('li', {}, cb, h('span', { class: 'soluk' }, ' Sayfa ' + m.sayfa + ': '), h('del', {}, m.once), ' → ', h('ins', {}, m.sonra), ' ',
+          h('button', { type: 'button', class: 'kucuk-dugme', onclick: async () => { if (m.sayfa !== st.no) await git(m.sayfa); sec(m.id); } }, 'Göster')))),
+        uygula);
+    }
+    const bulPanel = h('details', { class: 'yd-bul' },
+      h('summary', {}, '🔎 Bul ve değiştir (tüm belgede)'),
+      h('div', { class: 'alanlar' },
+        h('div', { class: 'alan genis' }, h('label', { for: 'yd-bul' }, 'Bul'), bulGirdi),
+        h('div', { class: 'alan genis' }, h('label', { for: 'yd-yerine' }, 'Yerine'), yerineGirdi),
+        h('div', { class: 'alan' }, h('div', { class: 'onay-satiri' }, bkOnay, h('label', { for: 'yd-bk' }, 'Büyük/küçük harfe duyarlı')),
+          h('div', { class: 'onay-satiri' }, tkOnay, h('label', { for: 'yd-tk' }, 'Yalnız tam kelime')))),
+      h('div', { class: 'eylem' }, h('button', { type: 'button', onclick: bulGoster }, 'Eşleşmeleri göster')),
+      h('small', { class: 'soluk' }, 'Bir satırın içinde aranır; iki satıra bölünmüş ifadeler bulunmaz. Önce eşleşmeleri görür, istediklerinizi seçip uygularsınız.'),
+      bulSonuc);
+    bulGirdi.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bulGoster(); } });
+    yerineGirdi.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); bulGoster(); } });
+    const gecmisSatiri = h('div', { class: 'eylem' }, geriDugme, yineleDugme);
+
+    el.append(durumAlani, aralikAlani, fontAlani, bulPanel, lejant, gecmisSatiri, gezgin, h('div', { class: 'sahne-orta' }, sahne), panel, liste);
     el.hidden = true;
 
     // ---- Analiz --------------------------------------------------------------------------------
@@ -164,7 +223,7 @@ aracKur({
       const korumali = l.koruma && !(l.koruma === 'ustalt' && st.kilitAcik.has(id));
       if (l.koruma === 'ustalt') {
         const kilit = h('input', { type: 'checkbox', id: 'yd-kilit', checked: st.kilitAcik.has(id) });
-        kilit.onchange = () => { if (kilit.checked) st.kilitAcik.add(id); else { st.kilitAcik.delete(id); delete st.degisiklikler[id]; } sec(id); listeyiGoster(); };
+        kilit.onchange = () => { if (kilit.checked) st.kilitAcik.add(id); else { st.kilitAcik.delete(id); degistir(() => { delete st.degisiklikler[id]; }); } sec(id); listeyiGoster(); };
         parcalar.push(kutu('bilgi', h('div', {}, h('p', {}, '🔒 Bu satır üst/alt bilgi (her sayfada aynı yerde tekrar ediyor). Varsayılan olarak kilitlidir; değiştirmezseniz orijinal kalır.'),
           h('div', { class: 'onay-satiri' }, kilit, h('label', { for: 'yd-kilit' }, 'Kilidi aç, bu sayfadaki satırı düzenleyeceğim')))));
       } else if (korumali) {
@@ -206,11 +265,10 @@ aracKur({
         const kaydet = h('button', {
           type: 'button', class: 'birincil', onclick: () => {
             const y = oku();
-            if (Object.keys(y).length) st.degisiklikler[id] = y; else delete st.degisiklikler[id];
-            kutulariCiz(); listeyiGoster(); sec(id);
+            degistir(() => { if (Object.keys(y).length) st.degisiklikler[id] = y; else delete st.degisiklikler[id]; });
           },
         }, 'Değişikliği kaydet');
-        const geriAl = h('button', { type: 'button', onclick: () => { delete st.degisiklikler[id]; kutulariCiz(); listeyiGoster(); sec(id); } }, 'Orijinale döndür');
+        const geriAl = h('button', { type: 'button', onclick: () => degistir(() => { delete st.degisiklikler[id]; }) }, 'Orijinale döndür');
         parcalar.push(h('div', { class: 'alanlar' },
           h('div', { class: 'alan genis' }, h('label', { for: 'yd-metin' }, 'Yeni yazı'), metin),
           h('div', { class: 'alan' }, h('label', { for: 'yd-aile' }, 'Yazı tipi'), aile),
@@ -240,7 +298,7 @@ aracKur({
           h('del', {}, l?.metin ?? ''), ' → ', h('ins', {}, d.metin ?? l?.metin ?? ''),
           ek.length ? h('span', { class: 'soluk' }, ` (${ek.join(', ')})`) : '', ' ',
           h('button', { type: 'button', class: 'kucuk-dugme', onclick: async () => { if (l && l.sayfa !== st.no) await git(l.sayfa); sec(id); } }, 'Göster'),
-          h('button', { type: 'button', class: 'kucuk-dugme', onclick: () => { delete st.degisiklikler[id]; kutulariCiz(); listeyiGoster(); if (st.secili === id) sec(id); } }, 'Sil'));
+          h('button', { type: 'button', class: 'kucuk-dugme', onclick: () => degistir(() => { delete st.degisiklikler[id]; }) }, 'Sil'));
       })));
     }
 
@@ -251,6 +309,7 @@ aracKur({
         if (!d || d.sifreli || !d.sayfa) { st.belge?.kapat?.(); st.belge = null; el.hidden = true; return; }
         if (st.aktifId === d.id && st.bayt === d.bayt) return;
         Object.assign(st, { aktifId: d.id, bayt: d.bayt, ad: d.ad, degisiklikler: {}, kilitAcik: new Set(), esleme: {}, secili: null, no: 1 });
+        gecmis.geri.length = 0; gecmis.ileri.length = 0; gecmisDurum(); bulSonuc.replaceChildren();
         sonOrijinal = d.bayt;
         el.hidden = false; panel.hidden = true;
         st.belge?.kapat?.();

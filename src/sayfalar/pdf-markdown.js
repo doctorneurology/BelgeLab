@@ -31,7 +31,8 @@ aracKur({
   alanlar: [
     { id: 'sayfalar', tur: 'metin', etiket: 'Sayfalar', ipucu: 'Boş bırakırsanız tümü. Örnek: 1-50, 80', aciklama: 'Sayfa sınırı yoktur; yüzlerce sayfa tek seferde dönüşür.' },
     { id: 'resimler', tur: 'secim', etiket: 'Resimler', varsayilan: 'dosya', secenekler: [{ deger: 'dosya', ad: 'Ayrı PNG dosyaları (ZIP içinde, önerilen)' }, { deger: 'gomulu', ad: 'Markdown içine gömülü (tek dosya, büyük olabilir)' }, { deger: 'yok', ad: 'Resimleri alma' }] },
-    { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku (Türkçe)' }, { deger: 'yok', ad: 'Okuma; yalnızca gerçek yazıyı al' }] },
+    { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku' }, { deger: 'yok', ad: 'Okuma; yalnızca gerçek yazıyı al' }] },
+    { id: 'dil', tur: 'secim', etiket: 'OCR dili', varsayilan: 'tur+eng', secenekler: [{ deger: 'tur+eng', ad: 'Türkçe + İngilizce (önerilen)' }, { deger: 'tur', ad: 'Yalnız Türkçe' }, { deger: 'eng', ad: 'Yalnız İngilizce' }], aciklama: 'Yalnızca taranmış sayfalarda kullanılır.' },
     { id: 'ayirac', tur: 'onay', etiket: 'Sayfa ayracı ekle (<!-- Sayfa N --> ve çizgi)', varsayilan: false },
     { id: 'ustAlt', tur: 'onay', etiket: 'Sayfa numaralarını ve tekrarlanan üst/alt bilgiyi atla', varsayilan: true },
   ],
@@ -41,7 +42,7 @@ aracKur({
     try {
       const adTaban = dosyaAdiTuret(d.ad, '', 'md');
       const klasor = adTaban.replace(/\.md$/, '') + '-resimler';
-      const r = await pdfdenMarkdown(d.bayt, { sayfalar: a.sayfalar, resimler: a.resimler, ocr: a.ocr, sayfaAyirac: a.ayirac, ustAltAtla: a.ustAlt, resimKlasoru: klasor, ilerleme: (k, n) => ilerleme(k, n) });
+      const r = await pdfdenMarkdown(d.bayt, { sayfalar: a.sayfalar, resimler: a.resimler, ocr: a.ocr, dil: a.dil, sayfaAyirac: a.ayirac, ustAltAtla: a.ustAlt, resimKlasoru: klasor, ilerleme: (k, n) => ilerleme(k, n) });
       const ciktilar = [{ ad: adTaban, bayt: new TextEncoder().encode(r.md) }, ...r.resimler.map((x) => ({ ad: x.ad, bayt: x.bayt }))];
       const b = r.bilgi;
       return {

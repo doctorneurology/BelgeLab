@@ -2,6 +2,7 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import Tesseract from 'tesseract.js';
 import { renderOrtamiAyarla } from '../src/core/render.js';
 import { qpdfWasmAyarla } from '../src/core/sifre.js';
@@ -18,7 +19,8 @@ export function nodeOrtaminiKur() {
   // OCR: Türkçe dil verisi npm paketinden yerel diskten okunur (internet gerekmez).
   ocrOrtamiAyarla({
     createWorker: Tesseract.createWorker,
-    secenekler: { langPath: `${kok}node_modules/@tesseract.js-data/tur/4.0.0_best_int` },
+    // Önce sitenin kendi dil klasörü (tur + eng bir arada); yoksa npm paketindeki Türkçe verisi
+    secenekler: { langPath: existsSync(`${kok}public/tesseract/lang/eng.traineddata.gz`) ? `${kok}public/tesseract/lang` : `${kok}node_modules/@tesseract.js-data/tur/4.0.0_best_int` },
   });
   renderOrtamiAyarla({
     pdfjs,

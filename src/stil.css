@@ -349,3 +349,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .rozet { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--uyari-bg); border: 1px solid var(--uyari-kenar); vertical-align: middle; }
 .menu-panel .arac-ara-girdi { margin-top: 12px; }
 .menu-kisa { display: block; padding: 0 6px 8px; font-size: 0.85rem; }
+.yd-bul { margin: 8px 0; border: 1px solid var(--kenar); border-radius: 10px; padding: 8px 12px; background: var(--yuzey); }
+.yd-bul summary { cursor: pointer; font-weight: 600; }
+.yd-bul-liste { list-style: none; padding: 0; margin: 8px 0; max-height: 280px; overflow: auto; }
+.yd-bul-liste li { padding: 4px 0; border-bottom: 1px solid var(--kenar); }

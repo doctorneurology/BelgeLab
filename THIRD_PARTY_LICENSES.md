@@ -14,6 +14,7 @@ Bu projenin kendi kodu **MIT** lisanslıdır (bkz. `LICENSE`). Aşağıdaki bile
 | [qpdf](https://github.com/qpdf/qpdf) 12.2 (WebAssembly; `@neslinesli93/qpdf-wasm` ile) | 12.2.0 / 0.3.x | Apache-2.0 (qpdf), ISC (WASM paketleyici) | Şifre ekleme / şifre kaldırma |
 | [tesseract.js](https://github.com/naptha/tesseract.js) | 7.x | Apache-2.0 | OCR: taranmış sayfadaki yazıyı okuma (Türkçe) |
 | [tesseract.js-core](https://github.com/naptha/tesseract.js-core) (Tesseract OCR motorunun WebAssembly derlemesi) | 7.x | Apache-2.0 | OCR motoru (çevrimdışı çalışır) |
+| İngilizce OCR dil verisi: Tesseract `tessdata_best` / `eng` (npm: [@tesseract.js-data/eng](https://github.com/naptha/tessdata), `4.0.0_best_int`) | 1.0.0 | Apache-2.0 (veri; paketleyici MIT) | OCR İngilizce model dosyası (~3 MB, siteyle birlikte sunulur) |
 | Türkçe OCR dil verisi: Tesseract `tessdata_best` / `tur` (npm: [@tesseract.js-data/tur](https://github.com/naptha/tessdata), `4.0.0_best_int`) | 1.0.0 | Apache-2.0 (veri; paketleyici MIT) | OCR Türkçe model dosyası (~2 MB, siteyle birlikte sunulur; internetten indirilmez) |
 | [xlsx (SheetJS)](https://github.com/SheetJS/sheetjs) | 0.18.5 | Apache-2.0 | Excel okuma/yazma (Excel birleştir, hasta başvuru analizi) |
 | [pptxgenjs](https://github.com/gitbrent/PptxGenJS) | 4.x | MIT | PDF → PowerPoint (.pptx) çıktısı (bağımlılığı JSZip: MIT veya GPL-3.0+ ikili lisanslı; **MIT** seçeneği kullanılır) |

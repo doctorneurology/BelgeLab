@@ -27,7 +27,7 @@ export const TARAMA_SATIRLARI = [
  * @param secenek.don  sayfa döndürme (0/90/180/270)
  * @returns {{bayt:Uint8Array, kutular:object[][]}}  kutular: her sayfadaki satırların yaklaşık sayfa-noktası kutuları
  */
-export async function taramaPdf(sayfalar = [TARAMA_SATIRLARI], { dpi = 200, jpeg = false, boyut = 13, genislik = 595.28, yukseklik = 841.89, arkaPlan = '#ffffff', yaziRengi = '#111111' } = {}) {
+export async function taramaPdf(sayfalar = [TARAMA_SATIRLARI], { dpi = 200, jpeg = false, boyut = 13, genislik = 595.28, yukseklik = 841.89, arkaPlan = '#ffffff', yaziRengi = '#111111', egim = 0 } = {}) {
   fontKaydet();
   const doc = await PDFDocument.create();
   const olcek = dpi / 72;
@@ -41,6 +41,7 @@ export async function taramaPdf(sayfalar = [TARAMA_SATIRLARI], { dpi = 200, jpeg
     g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = yaziRengi;
     g.textBaseline = 'alphabetic';
+    if (egim) { g.translate(c.width / 2, c.height / 2); g.rotate((egim * Math.PI) / 180); g.translate(-c.width / 2, -c.height / 2); } // eğik tarama (derece, saat yönü +)
     const sayfaKutular = [];
     let y = 110;
     if (baslik) {

@@ -12,6 +12,7 @@ const kaynaklar = {
   isci: resolve(nm, 'tesseract.js', 'dist', 'worker.min.js'),
   cekirdek: resolve(nm, 'tesseract.js-core'),
   dil: resolve(nm, '@tesseract.js-data', 'tur', '4.0.0_best_int', 'tur.traineddata.gz'),
+  dilEng: resolve(nm, '@tesseract.js-data', 'eng', '4.0.0_best_int', 'eng.traineddata.gz'),
 };
 for (const [ad, yol] of Object.entries(kaynaklar)) {
   if (!existsSync(yol)) {
@@ -29,6 +30,7 @@ for (const d of ['tesseract-core-lstm.wasm.js', 'tesseract-core-simd-lstm.wasm.j
   copyFileSync(resolve(kaynaklar.cekirdek, d), resolve(hedef, 'core', d));
 }
 copyFileSync(kaynaklar.dil, resolve(hedef, 'lang', 'tur.traineddata.gz'));
+copyFileSync(kaynaklar.dilEng, resolve(hedef, 'lang', 'eng.traineddata.gz')); // İngilizce (tur+eng birlikte okunabilir)
 copyFileSync(resolve(nm, 'tesseract.js', 'LICENSE.md'), resolve(hedef, 'LICENSE-tesseract.js.txt'));
 copyFileSync(resolve(kaynaklar.cekirdek, 'LICENSE'), resolve(hedef, 'LICENSE-tesseract.js-core.txt'));
 // Dil verisi (tessdata_best, Apache-2.0): lisans metni, çekirdeğin Apache-2.0 metniyle aynıdır.

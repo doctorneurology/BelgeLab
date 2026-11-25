@@ -24,13 +24,14 @@ aracKur({
     { id: 'tabloDisi', tur: 'onay', etiket: 'Tablo olmayan metin satırlarını da aktar (A sütununa)', varsayilan: false },
     { id: 'sayilar', tur: 'onay', etiket: 'Sayıya benzeyen hücreleri sayı yap', varsayilan: true, aciklama: 'Baştaki sıfırlı değerler (TC no, telefon) metin kalır.' },
     { id: 'ondalik', tur: 'secim', etiket: 'Sayı biçimi', varsayilan: 'tr', secenekler: [{ deger: 'tr', ad: 'Türkçe: 1.234,5' }, { deger: 'en', ad: 'İngilizce: 1,234.5' }], goster: (d) => d.sayilar },
-    { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku (Türkçe)' }, { deger: 'yok', ad: 'Okuma' }] },
+    { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku' }, { deger: 'yok', ad: 'Okuma' }] },
+    { id: 'dil', tur: 'secim', etiket: 'OCR dili', varsayilan: 'tur+eng', secenekler: [{ deger: 'tur+eng', ad: 'Türkçe + İngilizce (önerilen)' }, { deger: 'tur', ad: 'Yalnız Türkçe' }, { deger: 'eng', ad: 'Yalnız İngilizce' }], aciklama: 'Yalnızca taranmış sayfalarda kullanılır.' },
   ],
   async calistir({ dosyalar, ayarlar: a, ilerleme, toplu = false }) {
     const d = dosyalar[0];
     if (a.ocr !== 'yok') await ocrHazirla();
     try {
-      const r = await pdfdenExcel(d.bayt, { sayfalar: a.sayfalar, duzen: a.duzen, tabloDisi: a.tabloDisi, sayilar: a.sayilar, ondalik: a.ondalik, ocr: a.ocr, ilerleme: (k, n) => ilerleme(k, n) });
+      const r = await pdfdenExcel(d.bayt, { sayfalar: a.sayfalar, duzen: a.duzen, tabloDisi: a.tabloDisi, sayilar: a.sayilar, ondalik: a.ondalik, ocr: a.ocr, dil: a.dil, ilerleme: (k, n) => ilerleme(k, n) });
       return {
         ciktilar: [{ ad: dosyaAdiTuret(d.ad, '', 'xlsx'), bayt: r.bayt }],
         mesaj: `${r.bilgi.tablo} tablo bulundu: ${r.bilgi.sayfa} Excel sayfası, ${r.bilgi.satir} satır.`,

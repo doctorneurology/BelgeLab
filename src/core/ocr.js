@@ -9,11 +9,13 @@
 // görünmez katman olarak eklenir; belgenin görünen hâline hiçbir zaman otomatik yazı yazılmaz.
 
 import { belgeAc, sayfaCiz, tuvaliBayta, EN_COK_PIKSEL, paralelSayfalar } from './render.js';
+import { PDFDocument, degrees } from 'pdf-lib';
 import { pdfAc, kaydet } from './belge.js';
 import { yeniIslem, SayfaCizici, eklenenleriBul, eklenenleriKaldir } from './cizim.js';
 import { yaziTipiGom, yaziTipiOlcer } from './fonts.js';
 import { PdfHatasi } from './hatalar.js';
 import { sayfaSecimi } from './util.js';
+import { egiklikAcisi, tuvaliDondur } from './egiklik.js';
 import { iptalKontrol, iptalEdildiMi, iptalDinle, IptalHatasi } from './iptal.js';
 
 let ORTAM = null;
@@ -168,13 +170,22 @@ function dpiSinirla(sayfa, dpi) {
  * Tek sayfayı çizer ve okur. Sonuç koordinatları sayfa NOKTASI cinsindendir (orijin: görünür sol-alt).
  * @returns {{no, genislik, yukseklik, guven, satirlar:{metin,guven,x0,y0,x1,y1,paragraf,kelimeler}[], kelimeler:[], dpi}}
  */
-export async function sayfaOcr(belge, no, { dpi = 300, dil = 'tur' } = {}) {
+export async function sayfaOcr(belge, no, { dpi = 300, dil = 'tur', donus = 0, egiklikDuzelt = false } = {}) {
   const sayfa = await belge.getPage(no);
-  const vp = sayfa.getViewport({ scale: 1 });
+  const vp = sayfa.getViewport({ scale: 1, ...(donus ? { rotation: (sayfa.rotate + donus) % 360 } : {}) });
   const d = dpiSinirla(sayfa, dpi);
   sayfa.cleanup();
   const olcek = d / 72;
-  const { tuval } = await sayfaCiz(belge, no, { olcek });
+  let { tuval } = await sayfaCiz(belge, no, { olcek, donus });
+  // Eğik tarama: açı bulunur, resim düzeltilir; OKUMA düzeltilmiş resimde yapılır, düzeltilmiş görüntü çağırana verilir.
+  let duzeltilmis = null;
+  if (egiklikDuzelt) {
+    const e = egiklikAcisi(tuval);
+    if (Math.abs(e.aci) >= 0.4 && e.guven >= 1.05) {
+      tuval = tuvaliDondur(tuval, e.aci);
+      duzeltilmis = { aci: e.aci, jpeg: await tuvaliBayta(tuval, 'jpeg', 0.88) };
+    }
+  }
   const png = await tuvaliBayta(tuval, 'png');
   const r = await goruntuOcr(png, { dil });
   const satirlar = [];
@@ -187,7 +198,28 @@ export async function sayfaOcr(belge, no, { dpi = 300, dil = 'tur' } = {}) {
       kelimeler.push(...ks);
     }
   });
-  return { no, genislik: vp.width, yukseklik: vp.height, guven: r.guven, satirlar, kelimeler, metin: r.metin, dpi: d };
+  return { no, genislik: vp.width, yukseklik: vp.height, guven: r.guven, satirlar, kelimeler, metin: r.metin, dpi: d, donus, duzeltilmis };
+}
+
+/**
+ * Sayfanın dik durması için gereken ek dönüş (0/90/180/270, saat yönü). Önce olduğu gibi okunur; okuma güvenilirse 0 döner.
+ * Değilse dört yön düşük çözünürlükte denenir ve belirgin biçimde daha iyi okunan yön seçilir (zayıf sayfada 0 kalır).
+ */
+export async function sayfaYonuBul(belge, no, { dil = 'tur', dpi = 110 } = {}) {
+  const skor = async (donus) => {
+    const sayfa = await belge.getPage(no);
+    const d = dpiSinirla(sayfa, dpi); sayfa.cleanup();
+    const { tuval } = await sayfaCiz(belge, no, { olcek: d / 72, donus });
+    const r = await goruntuOcr(await tuvaliBayta(tuval, 'png'), { dil });
+    let guven = 0, kelime = 0;
+    for (const p of r.paragraflar) for (const s of p.satirlar) for (const w of s.kelimeler) { guven += w.guven * w.metin.length; kelime++; }
+    return { skor: guven, kelime, ort: kelime ? guven / kelime : 0 };
+  };
+  const s0 = await skor(0);
+  if (s0.kelime >= 8 && s0.ort >= 120) return 0; // ortalama kelime başına güven×uzunluk yüksekse dik
+  let en = { donus: 0, skor: s0.skor, kelime: s0.kelime };
+  for (const dn of [90, 180, 270]) { const s = await skor(dn); if (s.skor > en.skor) en = { donus: dn, skor: s.skor, kelime: s.kelime }; }
+  return en.donus !== 0 && en.kelime >= 6 && en.skor >= Math.max(1, s0.skor) * 1.6 ? en.donus : 0;
 }
 
 /**
@@ -224,7 +256,15 @@ export async function gorunmezKatmanEkle(doc, sayfaKelimeleri, { aile = 'noto-sa
  * @param secenek.yaziVarsa  'atla' (varsayılan: zaten yazısı olan sayfaya dokunma) | 'yine'
  * @returns {{bayt, rapor:{no,durum,kelime,guven,dusukGuven}[], uyarilar:string[]}}
  */
-export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yaziVarsa = 'atla', ilerleme } = {}) {
+export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yaziVarsa = 'atla', yon = 'yok', egiklik = 'yok', yeniden = false, ilerleme } = {}) {
+  const uyarilarOn = [];
+  if (yeniden) {
+    // Bu sitenin daha önce eklediği OCR katmanı silinir; sayfalar yeniden okunur (başka programın katmanına dokunulmaz).
+    const eski = await pdfAc(bayt);
+    const k = eklenenleriKaldir(eski, 'ocr');
+    if (k.kaldirilan) { bayt = await kaydet(eski); uyarilarOn.push(`${k.sayfa} sayfadaki eski OCR katmanı silinip yeniden okundu.`); }
+    else uyarilarOn.push('Bu site tarafından eklenmiş bir OCR katmanı bulunamadı; başka programın OCR katmanına dokunulmaz (o sayfalar “zaten yazısı var” sayılıp atlanır).');
+  }
   const belge = await belgeAc(bayt);
   try {
     const secili = sayfaSecimi(sayfalar, belge.numPages);
@@ -237,9 +277,10 @@ export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yazi
       if (yaziVarsa === 'atla' && await sayfadaYaziVarMi(belge, no)) {
         sonuclar[k] = { rapor: { no, durum: 'atlandi', kelime: 0, guven: null, dusukGuven: 0 } };
       } else {
-        const s = await sayfaOcr(belge, no, { dpi, dil });
+        const donus = yon === 'otomatik' ? await sayfaYonuBul(belge, no, { dil }) : 0;
+        const s = await sayfaOcr(belge, no, { dpi, dil, donus, egiklikDuzelt: egiklik === 'duzelt' });
         sonuclar[k] = s.kelimeler.length
-          ? { rapor: { no, durum: 'tamam', kelime: s.kelimeler.length, guven: Math.round(s.guven), dusukGuven: s.kelimeler.filter((w) => w.guven < 60).length }, katman: { index: no - 1, kelimeler: s.kelimeler } }
+          ? { rapor: { no, durum: 'tamam', kelime: s.kelimeler.length, guven: Math.round(s.guven), dusukGuven: s.kelimeler.filter((w) => w.guven < 60).length, donus, egiklik: s.duzeltilmis?.aci ?? 0 }, katman: { index: no - 1, kelimeler: s.kelimeler }, donus, duzeltilmis: s.duzeltilmis, boyut: [s.genislik, s.yukseklik] }
           : { rapor: { no, durum: 'bos', kelime: 0, guven: null, dusukGuven: 0 } };
       }
       biten++;
@@ -248,18 +289,36 @@ export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yazi
     const rapor = sonuclar.map((x) => x.rapor);
     const katman = sonuclar.filter((x) => x.katman).map((x) => x.katman);
     ilerleme?.(secili.length, secili.length, 'Yazı katmanı ekleniyor…');
-    const uyarilar = [];
+    const uyarilar = [...uyarilarOn];
     const atlanan = rapor.filter((r) => r.durum === 'atlandi').map((r) => r.no);
     const bos = rapor.filter((r) => r.durum === 'bos').map((r) => r.no);
     if (atlanan.length) uyarilar.push(`Sayfa ${atlanan.join(', ')} zaten seçilebilir yazı içerdiği için atlandı.`);
     if (bos.length) uyarilar.push(`Sayfa ${bos.join(', ')} içinde okunabilir yazı bulunamadı.`);
     if (!katman.length) return { bayt, rapor, uyarilar, degisti: false };
-    const doc = await pdfAc(bayt);
+    let doc = await pdfAc(bayt);
+    // Yön ve eğiklik düzeltmeleri, görünmez yazı katmanı eklenmeden ÖNCE uygulanır (koordinatlar düzeltilmiş görünüme göredir).
+    const donenler = sonuclar.filter((x) => x.katman && x.donus && !x.duzeltilmis);
+    for (const x of donenler) { const p = doc.getPage(x.katman.index); p.setRotation(degrees((p.getRotation().angle + x.donus) % 360)); }
+    const duzeltilenler = sonuclar.filter((x) => x.katman && x.duzeltilmis);
+    if (duzeltilenler.length) {
+      for (const x of duzeltilenler) {
+        const i = x.katman.index;
+        const yeni = doc.insertPage(i, x.boyut);
+        yeni.drawImage(await doc.embedJpg(x.duzeltilmis.jpeg), { x: 0, y: 0, width: x.boyut[0], height: x.boyut[1] });
+        doc.removePage(i + 1);
+      }
+      // Eski sayfa nesneleri (özgün tarama) dosyada artık kullanılmadan kalmasın: yalnızca sayfalar yeni belgeye kopyalanır.
+      const temiz = await PDFDocument.create();
+      (await temiz.copyPages(doc, doc.getPageIndices())).forEach((p) => temiz.addPage(p));
+      doc = temiz;
+      uyarilar.push(`${duzeltilenler.length} sayfanın eğikliği düzeltildi (sayfa yeniden resimlendi; o sayfalardaki bağlantı/yer imi gibi öğeler ve belge bilgileri taşınmadı).`);
+    }
+    if (donenler.length) uyarilar.push(`${donenler.length} sayfa yan/ters duruyordu; dik görünecek şekilde döndürüldü.`);
     await gorunmezKatmanEkle(doc, katman);
     const cikti = await kaydet(doc);
     const dusuk = rapor.reduce((t, r) => t + r.dusukGuven, 0);
     if (dusuk) uyarilar.push(`${dusuk} kelimenin okunma güveni düşük (%60'ın altı). Arama sonuçlarında bu kelimeler eksik çıkabilir.`);
-    uyarilar.push('Okunan yazı görünmezdir ve yalnızca arama/kopyalama içindir; sayfanın görünüşü değişmedi. OCR hata yapabilir (özellikle bulanık ya da eğik taramalarda).');
+    uyarilar.push(`Okunan yazı görünmezdir ve yalnızca arama/kopyalama içindir${donenler.length || duzeltilenler.length ? ' (yön/eğiklik düzeltilen sayfalar dışında sayfa görünüşü değişmedi)' : '; sayfanın görünüşü değişmedi'}. OCR hata yapabilir (özellikle bulanık ya da eğik taramalarda).`);
     return { bayt: cikti, rapor, uyarilar, degisti: true };
   } finally {
     await belge.kapat();

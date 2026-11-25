@@ -47,10 +47,11 @@ export async function tuvaliBayta(tuval, bicim = 'png', kalite = 0.92) {
 export const EN_COK_PIKSEL = 40_000_000;
 
 /** Tek sayfayı çizer. sayfaNo 1 tabanlıdır. @returns {{tuval, genislik, yukseklik}} */
-export async function sayfaCiz(belge, sayfaNo, { olcek = 1, arkaPlan = '#ffffff' } = {}) {
+export async function sayfaCiz(belge, sayfaNo, { olcek = 1, arkaPlan = '#ffffff', donus = 0 } = {}) {
   const o = ortam();
   const sayfa = await belge.getPage(sayfaNo);
-  const vp = sayfa.getViewport({ scale: olcek });
+  // donus: sayfanın kendi dönüşüne EK derece (0/90/180/270); OCR'da yan duran sayfayı dik okumak için
+  const vp = sayfa.getViewport({ scale: olcek, ...(donus ? { rotation: (sayfa.rotate + donus) % 360 } : {}) });
   const genislik = Math.max(1, Math.ceil(vp.width));
   const yukseklik = Math.max(1, Math.ceil(vp.height));
   if (genislik * yukseklik > EN_COK_PIKSEL) {

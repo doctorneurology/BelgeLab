@@ -23,7 +23,8 @@ aracKur({
   ],
   alanlar: [
     { id: 'sayfalar', tur: 'metin', etiket: 'Sayfalar', ipucu: 'Boş bırakırsanız tümü. Örnek: 1-5, 8' },
-    { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku (Türkçe)' }, { deger: 'yok', ad: 'Okuma; yalnızca gerçek yazıyı al' }] },
+    { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku' }, { deger: 'yok', ad: 'Okuma; yalnızca gerçek yazıyı al' }] },
+    { id: 'dil', tur: 'secim', etiket: 'OCR dili', varsayilan: 'tur+eng', secenekler: [{ deger: 'tur+eng', ad: 'Türkçe + İngilizce (önerilen)' }, { deger: 'tur', ad: 'Yalnız Türkçe' }, { deger: 'eng', ad: 'Yalnız İngilizce' }], aciklama: 'Yalnızca taranmış sayfalarda kullanılır.' },
     { id: 'resimler', tur: 'onay', etiket: 'Resimleri aktar', varsayilan: true },
     { id: 'ustAlt', tur: 'onay', etiket: 'Sayfa numaralarını ve her sayfada tekrarlanan üst/alt bilgiyi atla', varsayilan: true },
   ],
@@ -32,7 +33,7 @@ aracKur({
     if (a.ocr !== 'yok') await ocrHazirla();
     try {
       const r = await pdfdenWord(d.bayt, {
-        sayfalar: a.sayfalar, ocr: a.ocr, resimler: a.resimler, ustAltAtla: a.ustAlt, dosyaAdi: d.ad,
+        sayfalar: a.sayfalar, ocr: a.ocr, dil: a.dil, resimler: a.resimler, ustAltAtla: a.ustAlt, dosyaAdi: d.ad,
         ilerleme: (k, n) => ilerleme(k, n),
       });
       const b = r.bilgi;
