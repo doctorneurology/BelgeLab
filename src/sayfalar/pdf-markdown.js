@@ -25,12 +25,11 @@ aracKur({
   dugme: 'Markdown’a çevir',
   onizleme: false,
   notlar: [
-    kutu('bilgi', h('span', {}, h('b', {}, 'Sayfa ve dosya sınırı yok. '), 'Başlıklar (yazı boyutundan), paragraflar, kalın/italik, madde işaretleri, bağlantılar, basit tablolar ve resimler aktarılır. Taranmış sayfalar OCR ile okunur. Yapay zekâ/LLM kullanımına uygun, temiz bir metin üretir.')),
+    kutu('bilgi', h('span', {}, h('b', {}, 'Sayfa ve dosya sınırı yok. '), 'Başlıklar (yazı boyutundan), paragraflar, kalın/italik, madde işaretleri, bağlantılar, basit tablolar aktarılır. Resimler aktarılmaz: çıktı yalnızca tek bir .md dosyasıdır (bu sayede dönüştürme de çok daha hızlıdır). Taranmış sayfalar OCR ile okunur. Yapay zekâ/LLM kullanımına uygun, temiz bir metin üretir.')),
     kutu('uyari', 'PDF’ten yapı tahmin edilir; iki sütunlu sayfalar, birleştirilmiş hücreli tablolar ve formüller bozulabilir. Çıktıyı gözden geçirin.'),
   ],
   alanlar: [
     { id: 'sayfalar', tur: 'metin', etiket: 'Sayfalar', ipucu: 'Boş bırakırsanız tümü. Örnek: 1-50, 80', aciklama: 'Sayfa sınırı yoktur; yüzlerce sayfa tek seferde dönüşür.' },
-    { id: 'resimler', tur: 'secim', etiket: 'Resimler', varsayilan: 'dosya', secenekler: [{ deger: 'dosya', ad: 'Ayrı PNG dosyaları (ZIP içinde, önerilen)' }, { deger: 'gomulu', ad: 'Markdown içine gömülü (tek dosya, büyük olabilir)' }, { deger: 'yok', ad: 'Resimleri alma' }] },
     { id: 'ocr', tur: 'secim', etiket: 'Taranmış sayfalar', varsayilan: 'otomatik', secenekler: [{ deger: 'otomatik', ad: 'OCR ile oku' }, { deger: 'yok', ad: 'Okuma; yalnızca gerçek yazıyı al' }] },
     { id: 'dil', tur: 'secim', etiket: 'OCR dili', varsayilan: 'tur+eng', secenekler: [{ deger: 'tur+eng', ad: 'Türkçe + İngilizce (önerilen)' }, { deger: 'tur', ad: 'Yalnız Türkçe' }, { deger: 'eng', ad: 'Yalnız İngilizce' }], aciklama: 'Yalnızca taranmış sayfalarda kullanılır.' },
     { id: 'ayirac', tur: 'onay', etiket: 'Sayfa ayracı ekle (<!-- Sayfa N --> ve çizgi)', varsayilan: false },
@@ -42,12 +41,12 @@ aracKur({
     try {
       const adTaban = dosyaAdiTuret(d.ad, '', 'md');
       const klasor = adTaban.replace(/\.md$/, '') + '-resimler';
-      const r = await pdfdenMarkdown(d.bayt, { sayfalar: a.sayfalar, resimler: a.resimler, ocr: a.ocr, dil: a.dil, sayfaAyirac: a.ayirac, ustAltAtla: a.ustAlt, resimKlasoru: klasor, ilerleme: (k, n) => ilerleme(k, n) });
-      const ciktilar = [{ ad: adTaban, bayt: new TextEncoder().encode(r.md) }, ...r.resimler.map((x) => ({ ad: x.ad, bayt: x.bayt }))];
+      const r = await pdfdenMarkdown(d.bayt, { sayfalar: a.sayfalar, resimler: 'yok', ocr: a.ocr, dil: a.dil, sayfaAyirac: a.ayirac, ustAltAtla: a.ustAlt, resimKlasoru: klasor, ilerleme: (k, n) => ilerleme(k, n) });
+      const ciktilar = [{ ad: adTaban, bayt: new TextEncoder().encode(r.md) }]; // yalnızca .md
       const b = r.bilgi;
       return {
         ciktilar,
-        mesaj: `Markdown hazır: ${b.paragraf ?? 0} paragraf, ${b.baslik ?? 0} başlık, ${b.madde ?? 0} madde, ${b.tablo ?? 0} tablo, ${b.resim ?? 0} resim (${(r.md.length / 1024).toFixed(0)} KB metin).${r.resimler.length ? ' Resimler “' + klasor + '” klasöründe; ZIP olarak indirirseniz bağlantılar çalışır.' : ''}`,
+        mesaj: `Markdown hazır: ${b.paragraf ?? 0} paragraf, ${b.baslik ?? 0} başlık, ${b.madde ?? 0} madde, ${b.tablo ?? 0} tablo (${(r.md.length / 1024).toFixed(0)} KB metin).`,
         uyarilar: r.uyarilar,
         ekler: [onizleme(r.md), hizliGecis('Hızlı geçiş', ['pdf-word', 'pdf-excel', 'ocr'])],
       };
