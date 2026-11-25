@@ -15,12 +15,13 @@ const temel = (ad) => String(ad).replace(/\.[^.\\/]+$/, '').replace(/[\\/:*?"<>|
  * @param secenek.hataMetni   (hata) => string
  * @param secenek.ilerleme    (tamamlanan, toplam, dosya) => void  (her dosyadan ÖNCE çağrılır)
  * @param secenek.iptalMi     () => boolean
+ * @param secenek.dosyaBitti  async (dosya, ciktilar:[{ad,bayt}]) => void  — her dosya BİTER BİTMEZ çağrılır (ör. hafızaya kaydetmek için); hatası işlemi durdurmaz
  * @param secenek.parcaSiniri ZIP parçası en çok bu kadar bayt (varsayılan 200 MB)
  * @param secenek.zipAdi      (parcaNo) => string
  * @returns {{zipler:{ad,bayt}[], sonuclar:object[], uyarilar:{metin,dosyalar:string[]}[], toplamCikti:number, basarili:number, hatali:number, iptal:boolean}}
  */
 export async function topluIsle(dosyalar, islem, {
-  atla = () => null, hataMetni = (e) => e?.message ?? String(e), ilerleme, iptalMi = () => false,
+  atla = () => null, dosyaBitti, hataMetni = (e) => e?.message ?? String(e), ilerleme, iptalMi = () => false,
   parcaSiniri = 200 * 1024 * 1024, zipAdi = (n) => `toplu-${n}.zip`,
 } = {}) {
   const n = dosyalar.length;
@@ -54,12 +55,16 @@ export async function topluIsle(dosyalar, islem, {
       const cikti = r?.ciktilar ?? [];
       const klasor = cikti.length > 1 ? `${temel(d.ad)}/` : '';
       let boyut = 0;
+      const adli = [];
       for (const c of cikti) {
-        bekleyen.push({ ad: tekAd(`${klasor}${c.ad}`), bayt: c.bayt });
+        const ad = tekAd(`${klasor}${c.ad}`);
+        adli.push({ ad, bayt: c.bayt });
+        bekleyen.push({ ad, bayt: c.bayt });
         bekleyenBoyut += c.bayt.length; boyut += c.bayt.length; toplamCikti++;
       }
       for (const u of r?.uyarilar ?? []) { if (!uyariHaritasi.has(u)) uyariHaritasi.set(u, new Set()); uyariHaritasi.get(u).add(d.ad); }
       sonuclar.push({ ad: d.ad, ok: true, adet: cikti.length, boyut, mesaj: r?.mesaj });
+      if (dosyaBitti && adli.length) { try { await dosyaBitti(d, adli); } catch { /* kaydetme hatası işlemi durdurmaz */ } }
       if (bekleyenBoyut >= parcaSiniri) zipYaz();
     } catch (e) {
       sonuclar.push({ ad: d.ad, ok: false, neden: hataMetni(e) });

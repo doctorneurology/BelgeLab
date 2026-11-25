@@ -12,6 +12,7 @@ import { belgeAc, sayfaCiz } from '../core/render.js';
 import { resimTuru } from '../core/resim-pdf.js';
 import { zipOlustur } from '../core/zip.js';
 import { topluIsle } from '../core/toplu.js';
+import { hafiza, kaliciDepoIste } from '../core/hafiza.js';
 import { alanlariOlustur } from './alanlar.js';
 import { pdfOnizleme } from './onizleme.js';
 import { resimiPngYap } from './resim-yardim.js';
@@ -322,18 +323,26 @@ export function aracKur(tanim) {
     const cubuk = h('progress', { max: n, value: 0, 'aria-label': 'Toplu işlem ilerlemesi', stil: { width: '100%', maxWidth: '420px' } });
     eylem.append(iptalDugmesi, cubuk);
     let t;
+    // HAFIZA: her dosyanın çıktısı biter bitmez tarayıcı deposuna yazılır; sayfa ortada kapanırsa o ana kadarki işler kurtarılır.
+    let kayit = null, hafizaHata = null;
+    try { kayit = await hafiza().baslat({ arac: tanim.slug, aracAd: bilgi.ad, toplu: true, baslik: "toplu işlem" }); kaliciDepoIste(); } catch { kayit = null; }
     try {
       t = await topluIsle(dosyalar, async (d, i) => tanim.calistir({
         dosyalar: [d], ayarlar: degerler, toplu: true, dosyaNo: i,
         ilerleme: (k, m) => { ilerlemeYazi.textContent = `Dosya ${i + 1} / ${n}: ${d.ad}${m ? ` — ${k} / ${m}` : ''}`; },
       }), {
         atla: (d) => (d.sifreli && !dosyaTanimi.sifreliyiDogrudanAl ? 'Şifreli dosya; şifre girilmediği için atlandı.' : null),
+        dosyaBitti: async (d, ciktilar) => {
+          if (!kayit || hafizaHata) return;
+          for (const c of ciktilar) { try { await kayit.ekle(c); } catch (e) { hafizaHata = e; break; } }
+        },
         hataMetni: kullaniciMesaji, iptalMi: () => durum.iptal, zipAdi: (k) => `${tanim.slug}-toplu-${k}.zip`,
         ilerleme: async (i, toplam, d) => { cubuk.value = i; ilerlemeYazi.textContent = `Dosya ${i + 1} / ${toplam}: ${d.ad}`; await birakVer(); },
       });
     } finally {
       iptalDugmesi.remove(); cubuk.remove();
       try { await tanim.topluBitti?.(); } catch { /* kapatma hatası önemsiz */ }
+      if (kayit) { try { await (hafizaHata ? kayit.eksik(hafizaHata.message) : kayit.bitir()); } catch { /* yazılamadı */ } }
     }
     const uyarilar = t.uyarilar.map((u) => (u.dosyalar.length > 1 ? `${u.metin} (${u.dosyalar.length} dosyada)` : `${u.dosyalar[0]}: ${u.metin}`));
     if (uyarilar.length > 60) uyarilar.splice(60, uyarilar.length - 60, `… ve ${uyarilar.length - 60} uyarı daha.`);
@@ -346,14 +355,43 @@ export function aracKur(tanim) {
       ciktilar: t.zipler, tekTek: true,
       mesaj: `${t.basarili} / ${n} dosya işlendi${t.hatali ? `, ${t.hatali} dosya atlandı (hata)` : ''}; ${t.toplamCikti} çıktı dosyası ${t.zipler.length} ZIP içinde hazır.`,
       uyarilar, ekler: [detay],
+      hafizaDurumu: !kayit ? 'yok' : hafizaHata ? 'eksik' : 'tamam',
     };
   }
 
-  function sonucuGoster({ ciktilar = [], uyarilar = [], mesaj = '', bilgiler = [], ekler = [], tekTek = false }) {
+  /** Hafıza durum satırı. durum: 'kaydediliyor' | 'tamam' | 'eksik' | 'yok' */
+  function hafizaSatiri(durum, neden = '') {
+    const el = h('p', { class: 'soluk hafiza-satir', role: 'status' });
+    const yaz = (d, n = '') => {
+      if (d === 'kaydediliyor') el.replaceChildren('💾 Hafızaya kaydediliyor…');
+      else if (d === 'tamam') el.replaceChildren('💾 Bu çıktı hafızaya kaydedildi: sayfayı yanlışlıkla kapatsanız ya da yenileseniz bile ', h('a', { href: 'hafiza.html' }, 'Hafıza'), ' sayfasından yeniden indirebilirsiniz.');
+      else if (d === 'eksik') el.replaceChildren(`⚠️ Hafıza dolduğu için çıktıların tamamı kaydedilemedi${n ? ` (${n})` : ''}. Dosyaları hemen indirin; eski kayıtları `, h('a', { href: 'hafiza.html' }, 'Hafıza'), ' sayfasından silerek yer açabilirsiniz.');
+      else el.replaceChildren('');
+    };
+    yaz(durum, neden);
+    return { el, yaz };
+  }
+  async function tekCikisiKaydet(ciktilar, satir) {
+    try {
+      const k = await hafiza().baslat({ arac: tanim.slug, aracAd: bilgi.ad, toplu: false, baslik: ciktilar[0]?.ad });
+      kaliciDepoIste();
+      let hata = null;
+      for (const c of ciktilar) { try { await k.ekle(c); } catch (e) { hata = e; break; } }
+      await (hata ? k.eksik(hata.message) : k.bitir());
+      satir.yaz(hata ? 'eksik' : 'tamam', hata?.message ?? '');
+    } catch { satir.yaz('yok'); } // hafıza kullanılamıyor (gizli pencere vb.): sessizce atla
+  }
+
+  function sonucuGoster({ ciktilar = [], uyarilar = [], mesaj = '', bilgiler = [], ekler = [], tekTek = false, hafizaDurumu = null }) {
     const parcalar = [];
     const baslik = h('h2', { tabindex: '-1' }, ciktilar.length ? 'Hazır' : 'Sonuç');
     parcalar.push(baslik);
     if (mesaj) parcalar.push(kutu('basari', mesaj));
+    if (ciktilar.length) {
+      const satir = hafizaSatiri(hafizaDurumu ?? 'kaydediliyor');
+      parcalar.push(satir.el);
+      if (hafizaDurumu === null) tekCikisiKaydet(ciktilar, satir);
+    }
     for (const b of bilgiler) parcalar.push(kutu('bilgi', b));
     if (uyarilar.length) {
       parcalar.push(kutu('uyari', h('b', {}, 'Dikkat'),

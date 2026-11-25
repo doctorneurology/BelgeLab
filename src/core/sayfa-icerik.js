@@ -33,9 +33,16 @@ const carp = (m, n) => [
  */
 export async function sayfaYazilari(belge, no) {
   const sayfa = await belge.getPage(no);
-  const vp = sayfa.getViewport({ scale: 1 });
   const ic = await sayfa.getTextContent();
   await sayfa.getOperatorList().catch(() => null); // yazı tipi nesnelerinin yüklenmesi için
+  const sonuc = await yazilariCikar(sayfa, ic);
+  sayfa.cleanup();
+  return sonuc;
+}
+
+/** Zaten açılmış sayfa ve getTextContent sonucundan yazı parçalarını çıkarır (yazı tipleri yüklenmiş olmalı). */
+async function yazilariCikar(sayfa, ic) {
+  const vp = sayfa.getViewport({ scale: 1 });
   const t = vp.transform;
   const don = (x, y) => [t[0] * x + t[2] * y + t[4], vp.height - (t[1] * x + t[3] * y + t[5])];
   const fontOnbellek = new Map();
@@ -76,7 +83,6 @@ export async function sayfaYazilari(belge, no) {
       }
     }
   } catch { /* bağlantı okunamazsa yazı yine de aktarılır */ }
-  sayfa.cleanup();
   return { genislik: vp.width, yukseklik: vp.height, parcalar, dondurulmus };
 }
 
@@ -120,11 +126,17 @@ async function resmiPngYap(o) {
  * Sayfadaki resimleri (konum + PNG) çıkarır. En fazla `enCok` resim, çok küçükler (< 12 pt) atlanır.
  * @returns {{resimler:{x0,y0,x1,y1,png,piksel:{g,y}}[], atlanan:number}}
  */
-export async function sayfaResimleri(belge, no, { enCok = 40, enAz = 12, enCokPiksel = 25_000_000 } = {}) {
-  const OPS = pdfjsOps();
+export async function sayfaResimleri(belge, no, secenek = {}) {
   const sayfa = await belge.getPage(no);
+  const sonuc = await resimleriCikar(sayfa, await sayfa.getOperatorList(), secenek);
+  sayfa.cleanup();
+  return sonuc;
+}
+
+/** Zaten açılmış sayfa ve operatör listesinden resimleri çıkarır. onbellek: aynı ortak resmi (g_) tekrar PNG'leme. */
+async function resimleriCikar(sayfa, ol, { enCok = 40, enAz = 12, enCokPiksel = 25_000_000, onbellek } = {}) {
+  const OPS = pdfjsOps();
   const vp = sayfa.getViewport({ scale: 1 });
-  const ol = await sayfa.getOperatorList();
   const t = vp.transform;
   let ctm = [1, 0, 0, 1, 0, 0];
   const yigin = [];
@@ -150,15 +162,45 @@ export async function sayfaResimleri(belge, no, { enCok = 40, enAz = 12, enCokPi
     const { kutu } = b;
     if (kutu.x1 - kutu.x0 < enAz || kutu.y1 - kutu.y0 < enAz) { atlanan++; continue; }
     if (resimler.length >= enCok) { atlanan++; continue; }
-    const o = b.id ? await nesneBekle(sayfa, b.id) : b.satirIci;
-    if (!o || o.width * o.height > enCokPiksel) { atlanan++; continue; }
-    let png = null;
-    try { png = await resmiPngYap(o); } catch { png = null; }
+    const ortak = onbellek && b.id && String(b.id).startsWith('g_');
+    let png = ortak ? onbellek.get(b.id) : null;
+    let o = null;
+    if (!png) {
+      o = b.id ? await nesneBekle(sayfa, b.id) : b.satirIci;
+      if (!o || o.width * o.height > enCokPiksel) { atlanan++; continue; }
+      try { png = await resmiPngYap(o); } catch { png = null; }
+      if (png && ortak) onbellek.set(b.id, { png, piksel: { g: o.width, y: o.height } });
+    } else {
+      // önbellekten: { png, piksel }
+      resimler.push({ ...kutu, png: png.png, piksel: png.piksel });
+      continue;
+    }
     if (!png) { atlanan++; continue; }
     resimler.push({ ...kutu, png, piksel: { g: o.width, y: o.height } });
   }
-  sayfa.cleanup();
   return { resimler, atlanan, genislik: vp.width, yukseklik: vp.height };
+}
+
+/**
+ * TEK GEÇİŞTE sayfa içeriği: sayfa bir kez açılır, yazı ve operatör listesi bir kez okunur (eskiden 2-3 kez okunuyordu).
+ * @returns {{yaziVar:boolean, genislik, yukseklik, yazi?:{parcalar,dondurulmus}, resim?:{resimler,atlanan}}}
+ *   yaziVar=false ise (taranmış sayfa) yazı/resim çıkarılmaz; çağıran OCR yapabilir ya da tamamlamayı isteyebilir.
+ */
+export async function sayfaTumu(belge, no, { resim = true, onbellek, taranmisYine = false } = {}) {
+  const sayfa = await belge.getPage(no);
+  try {
+    const vp = sayfa.getViewport({ scale: 1 });
+    const ic = await sayfa.getTextContent();
+    const harf = ic.items.reduce((s, o) => s + (o.str ?? '').replace(/\s+/g, '').length, 0);
+    const yaziVar = harf >= 20;
+    if (!yaziVar && !taranmisYine) return { yaziVar, genislik: vp.width, yukseklik: vp.height };
+    const ol = await sayfa.getOperatorList().catch(() => null); // yazı tipi nesneleri için; resimler de buradan okunur
+    const y = await yazilariCikar(sayfa, ic);
+    const sonuc = { yaziVar, genislik: y.genislik, yukseklik: y.yukseklik, parcalar: y.parcalar, dondurulmus: y.dondurulmus };
+    if (resim && ol) sonuc.resimSonuc = await resimleriCikar(sayfa, ol, { onbellek });
+    else if (resim) sonuc.resimSonuc = { resimler: [], atlanan: 0 };
+    return sonuc;
+  } finally { sayfa.cleanup(); }
 }
 
 export { belgeAc };

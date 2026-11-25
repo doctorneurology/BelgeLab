@@ -13,7 +13,7 @@ import { pdfAc, kaydet } from './belge.js';
 import { yeniIslem, SayfaCizici, eklenenleriBul, eklenenleriKaldir } from './cizim.js';
 import { yaziTipiGom, yaziTipiOlcer } from './fonts.js';
 import { PdfHatasi } from './hatalar.js';
-import { sayfaSecimi } from './util.js';
+import { sayfaSecimi, eszamanliCalistir } from './util.js';
 
 let ORTAM = null;
 /**
@@ -25,30 +25,69 @@ export function ocrOrtamiAyarla(o) {
 }
 export const ocrHazirMi = () => !!ORTAM;
 
-let calisan = null;
-let calisanDili = null;
+// OCR işçi havuzu: birden çok sayfa AYNI ANDA okunabilsin diye birkaç Tesseract işçisi açılır (işlemci çekirdeklerine göre).
+// İşçiler ilk ihtiyaçta, en çok "hedefBoyut" kadar açılır; boşta olan işçi sıradaki sayfayı alır. Tek sayfa kullanımında 1 işçi açılır.
+let havuz = []; // { w, mesgul }
+let havuzDili = null;
+let olusturuluyor = 0;
+let hedefBoyut = 1;
+const bekleyenler = [];
 
-async function calisaniAl(dil) {
-  if (!ORTAM) throw new PdfHatasi('OCR bileşeni hazır değil.');
-  if (calisan && calisanDili === dil) return calisan;
-  await ocrKapat();
-  try {
-    const w = await ORTAM.createWorker(dil, 1, { cacheMethod: 'none', gzip: true, ...ORTAM.secenekler });
-    await w.setParameters({ user_defined_dpi: '300', preserve_interword_spaces: '1' });
-    calisan = w;
-    calisanDili = dil;
-    return w;
-  } catch (e) {
-    throw new PdfHatasi(`OCR başlatılamadı: ${e?.message ?? e}`, 'OCR');
-  }
+/** Bu cihaz için önerilen eşzamanlı OCR işçisi sayısı (çekirdek ve bellek sınırlı). */
+export function ocrOnerilenBoyut() {
+  const cekirdek = globalThis.navigator?.hardwareConcurrency ?? 4;
+  const bellek = globalThis.navigator?.deviceMemory ?? 8; // GB; bilinmiyorsa 8 varsay
+  const ust = bellek >= 8 ? 6 : bellek > 4 ? 4 : 2;
+  return Math.max(1, Math.min(ust, Math.floor(cekirdek / 2)));
+}
+/** En çok kaç OCR işçisi açılacağını ayarlar (açık olanlar kapatılmaz). */
+export function ocrHavuzBoyutu(n) {
+  hedefBoyut = Math.max(1, Math.floor(n) || 1);
 }
 
-/** OCR işçisini kapatır (bellek serbest kalır). */
+async function isciOlustur(dil) {
+  const w = await ORTAM.createWorker(dil, 1, { cacheMethod: 'none', gzip: true, ...ORTAM.secenekler });
+  await w.setParameters({ user_defined_dpi: '300', preserve_interword_spaces: '1' });
+  return w;
+}
+
+/** Boşta bir işçi verir (gerekirse yeni açar, yoksa sıra bekler). Mutlaka isciBirak çağrılmalı. */
+async function isciAl(dil) {
+  if (!ORTAM) throw new PdfHatasi('OCR bileşeni hazır değil.');
+  if (havuzDili !== null && havuzDili !== dil) await ocrKapat();
+  havuzDili = dil;
+  for (;;) {
+    const bos = havuz.find((i) => !i.mesgul);
+    if (bos) { bos.mesgul = true; return bos; }
+    if (havuz.length + olusturuluyor < hedefBoyut) {
+      olusturuluyor++;
+      try {
+        const kayit = { w: await isciOlustur(dil), mesgul: true };
+        havuz.push(kayit);
+        return kayit;
+      } catch (e) {
+        if (!havuz.length) throw new PdfHatasi(`OCR başlatılamadı: ${e?.message ?? e}`, 'OCR');
+        // Başka işçi zaten çalışıyor: yeni açılamadıysa onların boşalmasını bekle.
+        hedefBoyut = Math.max(1, havuz.length);
+      } finally { olusturuluyor--; }
+      continue;
+    }
+    await new Promise((coz) => bekleyenler.push(coz));
+  }
+}
+function isciBirak(kayit) {
+  kayit.mesgul = false;
+  const siradaki = bekleyenler.shift();
+  if (siradaki) siradaki();
+}
+
+/** Tüm OCR işçilerini kapatır (bellek serbest kalır). */
 export async function ocrKapat() {
-  const w = calisan;
-  calisan = null;
-  calisanDili = null;
-  if (w) { try { await w.terminate(); } catch { /* zaten kapalı */ } }
+  const eski = havuz;
+  havuz = [];
+  havuzDili = null;
+  while (bekleyenler.length) bekleyenler.shift()(); // bekleyenler yeniden dener
+  await Promise.all(eski.map(async (i) => { try { await i.w.terminate(); } catch { /* zaten kapalı */ } }));
 }
 
 /**
@@ -57,15 +96,17 @@ export async function ocrKapat() {
  *   Koordinatlar PİKSEL cinsindendir, orijin sol-üsttür (y aşağı doğru artar).
  */
 export async function goruntuOcr(png, { dil = 'tur', sayfaBolme } = {}) {
-  const w = await calisaniAl(dil);
-  if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: String(sayfaBolme) });
+  const kayit = await isciAl(dil);
+  const w = kayit.w;
   let sonuc;
   try {
+    if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: String(sayfaBolme) });
     sonuc = await w.recognize(png, {}, { blocks: true, text: true });
   } catch (e) {
     throw new PdfHatasi(`OCR çalışırken hata oluştu: ${e?.message ?? e}`, 'OCR');
   } finally {
-    if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: '3' });
+    try { if (sayfaBolme != null) await w.setParameters({ tessedit_pageseg_mode: '3' }); } catch { /* işçi kapanmış olabilir */ }
+    isciBirak(kayit);
   }
   const veri = sonuc.data;
   const kutu = (b) => ({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 });
@@ -171,23 +212,26 @@ export async function pdfOcr(bayt, { sayfalar = '', dpi = 300, dil = 'tur', yazi
   const belge = await belgeAc(bayt);
   try {
     const secili = sayfaSecimi(sayfalar, belge.numPages);
-    const rapor = [];
-    const katman = [];
-    for (let k = 0; k < secili.length; k++) {
+    // Sayfalar eşzamanlı okunur (OCR işçi havuzu); sonuçlar sayfa sırasıyla birleştirilir.
+    const sonuclar = new Array(secili.length);
+    let biten = 0;
+    ocrHavuzBoyutu(ocrOnerilenBoyut());
+    await eszamanliCalistir(secili.length, ocrOnerilenBoyut(), async (k) => {
       const no = secili[k] + 1;
-      ilerleme?.(k, secili.length, `Sayfa ${no} okunuyor…`);
+      ilerleme?.(biten, secili.length, `Sayfa ${no} okunuyor…`);
       if (yaziVarsa === 'atla' && await sayfadaYaziVarMi(belge, no)) {
-        rapor.push({ no, durum: 'atlandi', kelime: 0, guven: null, dusukGuven: 0 });
-        continue;
+        sonuclar[k] = { rapor: { no, durum: 'atlandi', kelime: 0, guven: null, dusukGuven: 0 } };
+      } else {
+        const s = await sayfaOcr(belge, no, { dpi, dil });
+        sonuclar[k] = s.kelimeler.length
+          ? { rapor: { no, durum: 'tamam', kelime: s.kelimeler.length, guven: Math.round(s.guven), dusukGuven: s.kelimeler.filter((w) => w.guven < 60).length }, katman: { index: no - 1, kelimeler: s.kelimeler } }
+          : { rapor: { no, durum: 'bos', kelime: 0, guven: null, dusukGuven: 0 } };
       }
-      const s = await sayfaOcr(belge, no, { dpi, dil });
-      if (!s.kelimeler.length) {
-        rapor.push({ no, durum: 'bos', kelime: 0, guven: null, dusukGuven: 0 });
-        continue;
-      }
-      katman.push({ index: no - 1, kelimeler: s.kelimeler });
-      rapor.push({ no, durum: 'tamam', kelime: s.kelimeler.length, guven: Math.round(s.guven), dusukGuven: s.kelimeler.filter((w) => w.guven < 60).length });
-    }
+      biten++;
+      ilerleme?.(biten, secili.length, `Sayfa ${no} tamam`);
+    });
+    const rapor = sonuclar.map((x) => x.rapor);
+    const katman = sonuclar.filter((x) => x.katman).map((x) => x.katman);
     ilerleme?.(secili.length, secili.length, 'Yazı katmanı ekleniyor…');
     const uyarilar = [];
     const atlanan = rapor.filter((r) => r.durum === 'atlandi').map((r) => r.no);

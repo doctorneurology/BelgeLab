@@ -112,3 +112,21 @@ export function bayt(n) {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
+
+/**
+ * 0..n-1 numaralı işleri en çok `sinir` tanesi AYNI ANDA çalışacak şekilde yürütür (sırayla başlatır).
+ * İlk hatada kalan işler başlatılmaz ve hata fırlatılır.
+ */
+export async function eszamanliCalistir(n, sinir, islem) {
+  let siradaki = 0;
+  let hata = null;
+  const isci = async () => {
+    while (!hata) {
+      const k = siradaki++;
+      if (k >= n) return;
+      try { await islem(k); } catch (e) { hata ??= e; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(sinir, n)) }, isci));
+  if (hata) throw hata;
+}

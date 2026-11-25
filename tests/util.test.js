@@ -62,3 +62,24 @@ describe('ZIP yazıcı', () => {
     expect(crc32(new TextEncoder().encode('123456789'))).toBe(0xcbf43926);
   });
 });
+
+import { eszamanliCalistir } from '../src/core/util.js';
+describe('eszamanliCalistir', () => {
+  it('sınırı aşmadan hepsini çalıştırır', async () => {
+    let aktif = 0, enCok = 0;
+    const biten = [];
+    await eszamanliCalistir(20, 4, async (k) => {
+      aktif++; enCok = Math.max(enCok, aktif);
+      await new Promise((r) => setTimeout(r, 3));
+      aktif--; biten.push(k);
+    });
+    expect(enCok).toBeLessThanOrEqual(4);
+    expect(enCok).toBeGreaterThan(1);
+    expect(biten.sort((a, b) => a - b)).toEqual([...Array(20).keys()]);
+  });
+  it('hatayı iletir ve yeni iş başlatmaz', async () => {
+    let basladi = 0;
+    await expect(eszamanliCalistir(50, 2, async (k) => { basladi++; if (k === 3) throw new Error('x'); await new Promise((r) => setTimeout(r, 2)); })).rejects.toThrow('x');
+    expect(basladi).toBeLessThan(50);
+  });
+});

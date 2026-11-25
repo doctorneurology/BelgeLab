@@ -33,7 +33,8 @@ sayfa({ dosya: 'index.html', baslik: `${SITE_ADI} — tarayıcıda çalışan, g
 sayfa({ dosya: 'pdf.html', baslik: `PDF düzenleme — ${SITE_ADI}`, aciklama: 'PDF araçları', betik: './src/pdf-sayfasi.js' });
 sayfa({ dosya: 'excel.html', baslik: `Excel düzenleme — ${SITE_ADI}`, aciklama: 'Excel araçları', betik: './src/excel-sayfasi.js' });
 sayfa({ dosya: 'hakkinda.html', baslik: `İlkeler ve gizlilik — ${SITE_ADI}`, aciklama: 'Gizlilik ilkeleri ve yapmadığımız şeyler.', betik: './src/hakkinda.js' });
+sayfa({ dosya: 'hafiza.html', baslik: `Hafıza — ${SITE_ADI}`, aciklama: 'Ürettiğiniz çıktıların bu tarayıcıdaki kayıtlı kopyaları.', betik: './src/hafiza-sayfasi.js' });
 for (const a of ARACLAR) {
   sayfa({ dosya: `${a.slug}.html`, baslik: `${a.ad} — ${SITE_ADI}`, aciklama: a.kisa, betik: `./src/sayfalar/${a.slug}.js` });
 }
-console.log(`${ARACLAR.length + 4} HTML sayfası üretildi.`);
+console.log(`${ARACLAR.length + 5} HTML sayfası üretildi.`);

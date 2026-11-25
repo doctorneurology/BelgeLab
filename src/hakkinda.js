@@ -10,6 +10,7 @@ main.append(
     h('ul', {},
       h('li', {}, 'Seçtiğiniz dosyalar hiçbir sunucuya yüklenmez; tüm işlemler tarayıcınızın içinde, cihazınızda yapılır.'),
       h('li', {}, 'Hesap, çerez, reklam ya da izleme yoktur. Yazdığınız şifreler yalnızca işlem sırasında bellekte tutulur.'),
+      h('li', {}, 'Ürettiğiniz çıktılar, sayfa yanlışlıkla kapansa bile kaybolmasın diye yalnızca bu tarayıcıda (Hafıza sayfası) saklanır; hiçbir yere gönderilmez. Ortak bilgisayarda işiniz bitince oradan silin.'),
       h('li', {}, 'Site internet bağlantısını yalnızca sayfaları ve araç dosyalarını (yazı tipleri, PDF bileşenleri) indirmek için kullanır; bir kez yüklendikten sonra çoğu araç bağlantısız da çalışır.'))),
   h('section', { class: 'adim' },
     h('h2', {}, 'Yapmadığımız şeyler (ve yapmayacağımız)'),

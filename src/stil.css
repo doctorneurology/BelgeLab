@@ -342,3 +342,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .bs-tur-vurgu { background: rgba(255, 235, 59, 0.40); border-color: #e6c200; }
 .bs-tur-elips { border-radius: 50%; }
 .bs-tur-cizgi, .bs-tur-ok { background: transparent; border-style: dashed; }
+.hafiza-baglanti { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 8px; background: var(--yuzey-2); color: var(--metin); text-decoration: none; white-space: nowrap; }
+.hafiza-baglanti:hover { filter: brightness(0.96); }
+.hafiza-satir { margin: 6px 0; }
+.hafiza-kayit h2 { font-size: 1.1rem; margin: 0 0 4px; }
+.rozet { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--uyari-bg); border: 1px solid var(--uyari-kenar); vertical-align: middle; }
+.menu-panel .arac-ara-girdi { margin-top: 12px; }
+.menu-kisa { display: block; padding: 0 6px 8px; font-size: 0.85rem; }

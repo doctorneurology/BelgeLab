@@ -6,9 +6,9 @@
 // Burada yapılan her tahmin (sütun, tablo, başlık, birleştirilen tireli kelime…) sonuçta `uyarilar`/`bilgi` içinde bildirilir.
 
 import { belgeAc } from './render.js';
-import { sayfaYazilari, sayfaResimleri } from './sayfa-icerik.js';
-import { sayfaOcr, sayfadaYaziVarMi } from './ocr.js';
-import { sayfaSecimi } from './util.js';
+import { sayfaTumu } from './sayfa-icerik.js';
+import { sayfaOcr, ocrHavuzBoyutu, ocrOnerilenBoyut } from './ocr.js';
+import { sayfaSecimi, eszamanliCalistir } from './util.js';
 import { PdfHatasi } from './hatalar.js';
 
 const ORTANCA = (d) => { if (!d.length) return 0; const s = [...d].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
@@ -279,13 +279,17 @@ export async function pdfYapisi(bayt, {
     const bilgi = { sayfa: secili.length, paragraf: 0, baslik: 0, tablo: 0, resim: 0, ocrSayfa: 0, sutunluSayfa: 0, madde: 0, ustAltSilinen: 0, tireBirlestirilen: 0 };
     let atlananResim = 0, dondurulmus = 0, taranmisResimAtlandi = false;
 
-    for (let k = 0; k < secili.length; k++) {
+    // Sayfalar EŞZAMANLI işlenir (sıra korunur): taranmış sayfalar birden çok OCR işçisine dağılır,
+    // yazılı sayfalarda pdf.js işçisi ile ana iş parçacığı birbirini beklemez.
+    const onbellek = new Map(); // belge boyunca ortak resimler (logo gibi) bir kez PNG'lenir
+    let biten = 0;
+    const sayfaIsle = async (k) => {
       const no = secili[k] + 1;
-      ilerleme?.(k, secili.length, `Sayfa ${no} inceleniyor…`);
-      const yaziVar = await sayfadaYaziVarMi(belge, no);
+      ilerleme?.(biten, secili.length, `Sayfa ${no} inceleniyor…`);
+      const t = await sayfaTumu(belge, no, { resim: resimler, onbellek, taranmisYine: ocr === 'yok' });
       let parcalar, genislik, yukseklik, resimListe = [];
-      if (!yaziVar && ocr !== 'yok') {
-        ilerleme?.(k, secili.length, `Sayfa ${no} okunuyor (OCR)…`);
+      if (!t.yaziVar && ocr !== 'yok') {
+        ilerleme?.(biten, secili.length, `Sayfa ${no} okunuyor (OCR)…`);
         const o = await sayfaOcr(belge, no, { dpi: ocrDpi, dil });
         genislik = o.genislik; yukseklik = o.yukseklik;
         parcalar = [];
@@ -299,10 +303,9 @@ export async function pdfYapisi(bayt, {
         bilgi.ocrSayfa++;
         taranmisResimAtlandi = taranmisResimAtlandi || resimler;
       } else {
-        const y = await sayfaYazilari(belge, no);
-        genislik = y.genislik; yukseklik = y.yukseklik; parcalar = y.parcalar; dondurulmus += y.dondurulmus;
+        genislik = t.genislik; yukseklik = t.yukseklik; parcalar = t.parcalar; dondurulmus += t.dondurulmus;
         if (resimler) {
-          const r = await sayfaResimleri(belge, no);
+          const r = t.resimSonuc;
           atlananResim += r.atlanan;
           // sayfanın neredeyse tamamını kaplayan resim = arka plan/tarama; metin sayfasında aktarılmaz
           resimListe = r.resimler.filter((q) => {
@@ -312,8 +315,13 @@ export async function pdfYapisi(bayt, {
           });
         }
       }
-      sayfaVerisi.push({ no, genislik, yukseklik, parcalar, resimListe, satirlar: null });
-    }
+      sayfaVerisi[k] = { no, genislik, yukseklik, parcalar, resimListe, satirlar: null };
+      biten++;
+      ilerleme?.(biten, secili.length, `Sayfa ${no} tamam`);
+    };
+    // OCR varsa OCR işçisi sayısı kadar, yoksa 3 sayfa birden (pdf.js işçisi ile ana iş parçacığı üst üste binsin)
+    if (ocr !== 'yok') ocrHavuzBoyutu(ocrOnerilenBoyut());
+    await eszamanliCalistir(secili.length, ocr !== 'yok' ? ocrOnerilenBoyut() : 3, sayfaIsle);
 
     // Yazı boyutları ve ortak ölçüler (tüm sayfalar birlikte): gövde boyutu = en çok harf kullanılan boyut
     const harfBoyut = new Map();
