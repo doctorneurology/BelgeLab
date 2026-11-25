@@ -4,7 +4,7 @@
 export const BOLUMLER = [
   { id: 'pdf', ad: 'PDF düzenleme', ikon: '📄', sayfa: 'pdf.html', kisa: 'PDF araçları' },
   { id: 'excel', ad: 'Excel düzenleme', ikon: '📊', sayfa: 'excel.html', kisa: 'Excel araçları' },
-  { id: 'diger', ad: 'Resim ve metin', ikon: '🧰', sayfa: 'diger.html', kisa: 'Markdown/HTML editörü ve resim araçları' },
+  { id: 'diger', ad: 'Diğer editörler', ikon: '🧰', sayfa: 'diger.html', kisa: 'Markdown/HTML editörü ve resim araçları' },
 ];
 
 export const GRUPLAR = [
