@@ -615,7 +615,9 @@ export async function satirUyumu(satir, ozelEsleme) {
  * Belgeyi analiz eder. doc: pdf-lib belgesi. sayfaDizinleri: 0 tabanlı (boşsa hepsi).
  * Dönen nesne hem arayüz için (satırlar) hem de yeniden yazma motoru için (iç ayrıntılar) kullanılır.
  */
-export async function belgeAnaliz(doc, { sayfaDizinleri = null, esleme: ozelEsleme = null, sadeceYorumla = false } = {}) {
+// uyumHesapla=false: satırların "yeniden yazılabilir mi" denetimi (koruma/uyum) atlanır. Yalnızca konum/yazı tipi/renk gerekiyorsa
+// (ör. PDF → PowerPoint) kullanılır; düzenleme ekranı için true kalmalıdır.
+export async function belgeAnaliz(doc, { sayfaDizinleri = null, esleme: ozelEsleme = null, sadeceYorumla = false, uyumHesapla = true } = {}) {
   const pages = doc.getPages();
   const dizinler = sayfaDizinleri ?? pages.map((_, i) => i);
   const fontlar = new Map();
@@ -650,6 +652,7 @@ export async function belgeAnaliz(doc, { sayfaDizinleri = null, esleme: ozelEsle
   for (const s of sayfalar) {
     const alan = s.genislik * s.yukseklik;
     for (const l of s.satirlar) {
+      if (!uyumHesapla) { l.koruma = null; continue; }
       l.koruma = korumaBelirle(l, s.resimler, alan) ?? (l.ustalt ? 'ustalt' : null);
       if (!l.koruma || l.koruma === 'ustalt' || l.koruma === 'logo') l.uyum = await satirUyumu(l, ozelEsleme);
     }

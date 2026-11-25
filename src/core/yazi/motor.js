@@ -5,6 +5,7 @@
 //   yazilariKaldir(bayt)          → tüm yazıları çıkarılmış PDF (doğrulama için)
 
 import { pdfAc, kaydet, belgeOzellikleri } from '../belge.js';
+import { PDFDocument } from 'pdf-lib';
 import { PdfHatasi } from '../hatalar.js';
 import { belgeAnaliz, analizOzeti, KORUMA_ADI } from './analiz.js';
 import {
@@ -126,6 +127,33 @@ export async function yazilariKaldir(bayt, { sayfalar = null } = {}) {
   await degisiklikleriUygula(analiz, yerine);
   kullanilmayanlariSil(doc);
   return kaydet(doc);
+}
+
+/**
+ * TEK GEÇİŞTE: yazıları çözümler VE yazısız bir kopya üretir (PDF → PowerPoint için).
+ * Ayrı ayrı yaziAnalizEt + yazilariKaldir çağırmaya göre: belge bir kez yüklenir, çözümleme bir kez yapılır, satırların
+ * "yeniden yazılabilir mi" denetimi atlanır ve yazısız kopyaya YALNIZCA seçilen sayfalar konur (dosya çok küçülür).
+ * @returns {{ozet, yaziVar:boolean, yaziSizBayt:Uint8Array|null, yaziSizSayfalar:number[]|null}}
+ *   yaziSizSayfalar: yazısız kopyadaki sayfaların özgün sıra numaraları (0 tabanlı); kopyadaki k. sayfa = yaziSizSayfalar[k].
+ */
+export async function yaziCozVeKaldir(bayt, { sayfalar = null } = {}) {
+  const doc = await pdfAc(bayt);
+  const dz = dizinler(doc, sayfalar);
+  const analiz = await belgeAnaliz(doc, { sayfaDizinleri: dz, uyumHesapla: false });
+  const ozet = { ...analizOzeti(analiz, null), sayfaSayisi: doc.getPageCount() };
+  const yaziVar = analiz.sayfalar.some((s) => s.parcalar.length);
+  if (!yaziVar) return { ozet, yaziVar, yaziSizBayt: null, yaziSizSayfalar: null };
+  const yerine = new Map();
+  for (const s of analiz.sayfalar) for (const p of s.parcalar) yerine.set(p, { cizimler: [] });
+  await degisiklikleriUygula(analiz, yerine);
+  kullanilmayanlariSil(doc);
+  const secili = analiz.sayfalar.map((s) => s.dizin);
+  if (secili.length === doc.getPageCount()) return { ozet, yaziVar, yaziSizBayt: await kaydet(doc), yaziSizSayfalar: secili };
+  // Yalnızca seçilen sayfaları yeni bir belgeye al: seçilmeyen sayfaların resim/yazı tipi verisi taşınmaz.
+  const yeni = await PDFDocument.create();
+  const kopya = await yeni.copyPages(doc, secili);
+  kopya.forEach((p) => yeni.addPage(p));
+  return { ozet, yaziVar, yaziSizBayt: new Uint8Array(await yeni.save({ useObjectStreams: true })), yaziSizSayfalar: secili };
 }
 
 export { PdfHatasi };

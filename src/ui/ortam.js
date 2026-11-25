@@ -7,6 +7,19 @@ import { tuvaldenPng } from '../core/png.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = isciUrl;
 
+// pdf.js, sayfayı çizerken her parçada requestAnimationFrame bekler. Sekme arka plandayken (ya da pencere gizliyken) bu çağrı
+// hiç/çok seyrek (saniyede ~1) çalışır; yüzlerce sayfalık dönüştürmede sayfa başına ~1 sn boş bekleme ve sekme değişince DONMA demektir.
+// Burada çizim zamanlaması MessageChannel ile yapılır (arka planda kısılmaz). Gerçek rAF, ekranın boyanmasını beklemek için saklanır.
+window.__gercekRaf = window.requestAnimationFrame.bind(window);
+{
+  const kanal = new MessageChannel();
+  const bekleyen = new Map();
+  let sayac = 0;
+  kanal.port1.onmessage = (e) => { const f = bekleyen.get(e.data); if (f) { bekleyen.delete(e.data); f(performance.now()); } };
+  window.requestAnimationFrame = (f) => { const id = ++sayac; bekleyen.set(id, f); kanal.port2.postMessage(id); return id; };
+  window.cancelAnimationFrame = (id) => { bekleyen.delete(id); };
+}
+
 const vp = (yol) => new URL(`pdfjs/${yol}`, document.baseURI).href;
 
 const iscilar = []; // her PDF okuyucu kulvarı kendi pdf.js işçisini (ayrı iş parçacığı) kullanır

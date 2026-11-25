@@ -7,7 +7,7 @@
 
 import PptxGenJS from 'pptxgenjs';
 import { belgeAc, sayfaCiz, tuvaliBayta, paralelSayfalar } from './render.js';
-import { yaziAnalizEt, yazilariKaldir } from './yazi/motor.js';
+import { yaziCozVeKaldir } from './yazi/motor.js';
 import { sayfaSecimi } from './util.js';
 import { PdfHatasi } from './hatalar.js';
 
@@ -31,13 +31,15 @@ export async function pdfdenPowerPoint(bayt, { sayfalar = '', mod = 'duzenlenebi
   if (!['duzenlenebilir', 'resim'].includes(mod)) throw new PdfHatasi('Kip “duzenlenebilir” ya da “resim” olmalı.');
   const uyarilar = [];
   const belge = await belgeAc(bayt);
-  let ozet = null, yaziSizBayt = null;
+  let ozet = null, yaziSizBayt = null, yaziSizSira = null;
   try {
     const secili = sayfaSecimi(sayfalar, belge.numPages);
     if (mod === 'duzenlenebilir') {
       try {
-        ozet = await yaziAnalizEt(bayt, { sayfalar: secili });
-        if (ozet.yaziVar) yaziSizBayt = await yazilariKaldir(bayt, { sayfalar: secili });
+        const r = await yaziCozVeKaldir(bayt, { sayfalar: secili });
+        ozet = { ...r.ozet, yaziVar: r.yaziVar };
+        yaziSizBayt = r.yaziSizBayt;
+        yaziSizSira = r.yaziSizSayfalar ? new Map(r.yaziSizSayfalar.map((dizin, k) => [dizin + 1, k + 1])) : null; // özgün sayfa no → yazısız kopyadaki sayfa no
       } catch (e) {
         uyarilar.push(`Yazılar çözümlenemedi (${e?.message ?? e}); slaytlar resim olarak eklendi.`);
         ozet = null;
@@ -60,7 +62,7 @@ export async function pdfdenPowerPoint(bayt, { sayfalar = '', mod = 'duzenlenebi
       const sayfaOzet = ozet?.sayfalar.find((s) => s.no === no);
       const yaziliSayfa = !!sayfaOzet?.satirlar.some((l) => l.metin?.trim());
       const yaziSiz = mod === 'duzenlenebilir' && yaziliSayfa && !!yaziSizBayt;
-      const { tuval, genislik, yukseklik } = await sayfaCiz(yaziSiz ? await al('yazisiz') : b, no, { olcek: dpi / 72 });
+      const { tuval, genislik, yukseklik } = await sayfaCiz(yaziSiz ? await al('yazisiz') : b, yaziSiz ? (yaziSizSira?.get(no) ?? no) : no, { olcek: dpi / 72 });
       const png = await tuvaliBayta(tuval, 'png');
       ilerleme?.(++biten, secili.length, `Sayfa ${no} işleniyor…`);
       return { sayfaOzet, yaziSiz, genislik, yukseklik, png };

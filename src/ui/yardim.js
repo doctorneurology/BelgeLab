@@ -30,7 +30,7 @@ export const bekle = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Tarayıcının boyayabilmesi için bir an ver. */
 // Sekme arka plandayken requestAnimationFrame HİÇ çalışmaz; bu yüzden zaman aşımıyla yarıştırılır (toplu işlem donmasın).
 export const boyamaBekle = () => Promise.race([
-  new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))),
+  new Promise((r) => (window.__gercekRaf ?? requestAnimationFrame)(() => setTimeout(r, 0))),
   new Promise((r) => setTimeout(r, 120)),
 ]);
 
