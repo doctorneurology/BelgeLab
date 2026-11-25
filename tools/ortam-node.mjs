@@ -2,7 +2,8 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import Tesseract from 'tesseract.js';
 import { renderOrtamiAyarla } from '../src/core/render.js';
 import { qpdfWasmAyarla } from '../src/core/sifre.js';
@@ -13,6 +14,16 @@ import { readFileSync } from 'node:fs';
 const kok = fileURLToPath(new URL('../', import.meta.url));
 const pdfjsKlasoru = `${kok}node_modules/pdfjs-dist/`;
 
+// public/tesseract/lang varsa onu kullanır; yoksa npm paketlerinden (tur + eng) geçici bir klasör kurar.
+function dilKlasoru() {
+  const site = `${kok}public/tesseract/lang`;
+  if (existsSync(`${site}/tur.traineddata.gz`) && existsSync(`${site}/eng.traineddata.gz`)) return site;
+  const hedef = `${tmpdir()}/belgelab-ocr-dil`;
+  mkdirSync(hedef, { recursive: true });
+  for (const d of ['tur', 'eng']) copyFileSync(`${kok}node_modules/@tesseract.js-data/${d}/4.0.0_best_int/${d}.traineddata.gz`, `${hedef}/${d}.traineddata.gz`);
+  return hedef;
+}
+
 let hazir = false;
 export function nodeOrtaminiKur() {
   if (hazir) return;
@@ -21,8 +32,8 @@ export function nodeOrtaminiKur() {
   // OCR: Türkçe dil verisi npm paketinden yerel diskten okunur (internet gerekmez).
   ocrOrtamiAyarla({
     createWorker: Tesseract.createWorker,
-    // Önce sitenin kendi dil klasörü (tur + eng bir arada); yoksa npm paketindeki Türkçe verisi
-    secenekler: { langPath: existsSync(`${kok}public/tesseract/lang/eng.traineddata.gz`) ? `${kok}public/tesseract/lang` : `${kok}node_modules/@tesseract.js-data/tur/4.0.0_best_int` },
+    // Dil verisi (tur + eng) yerel diskten okunur; internete çıkılmaz. Klasör her ortamda (CI dahil) kendiliğinden hazırlanır.
+    secenekler: { langPath: dilKlasoru() },
   });
   // PDFium (PDF → Word "düzeni koru" kipi): wasm yerel diskten okunur
   pdfiumOrtamiAyarla({
